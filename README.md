@@ -1,5 +1,7 @@
 # llm-translate
 
+English · [简体中文](./README.zh-CN.md)
+
 A tiny, dependency-light translation tool for the terminal and Vim, backed by
 large language models. One CLI, swappable providers — **DeepSeek**, **OpenAI**,
 **Anthropic Claude**, and local **Ollama** — with a Vim plugin that translates
