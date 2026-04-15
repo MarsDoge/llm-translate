@@ -29,13 +29,20 @@ payload="$(jq -n \
     ]
   }')"
 
-response="$(curl -sS --fail-with-body "$ENDPOINT" \
+body_file="$(mktemp)"
+trap 'rm -f "$body_file"' EXIT
+http_code="$(curl -sS -o "$body_file" -w '%{http_code}' "$ENDPOINT" \
   -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "anthropic-version: $ANTHROPIC_VERSION" \
   -H "Content-Type: application/json" \
   -d "$payload")" || {
-    echo "claude: request failed: $response" >&2
+    echo "claude: curl failed: $(cat "$body_file")" >&2
     exit 1
   }
 
-echo "$response" | jq -r '.content[0].text'
+if [ "$http_code" -ge 400 ]; then
+  echo "claude: HTTP $http_code: $(cat "$body_file")" >&2
+  exit 1
+fi
+
+jq -r '.content[0].text' < "$body_file"

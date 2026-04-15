@@ -26,11 +26,18 @@ payload="$(jq -n \
     ]
   }')"
 
-response="$(curl -sS --fail-with-body "$ENDPOINT" \
+body_file="$(mktemp)"
+trap 'rm -f "$body_file"' EXIT
+http_code="$(curl -sS -o "$body_file" -w '%{http_code}' "$ENDPOINT" \
   -H "Content-Type: application/json" \
   -d "$payload")" || {
-    echo "ollama: request failed: $response" >&2
+    echo "ollama: curl failed: $(cat "$body_file")" >&2
     exit 1
   }
 
-echo "$response" | jq -r '.message.content'
+if [ "$http_code" -ge 400 ]; then
+  echo "ollama: HTTP $http_code: $(cat "$body_file")" >&2
+  exit 1
+fi
+
+jq -r '.message.content' < "$body_file"

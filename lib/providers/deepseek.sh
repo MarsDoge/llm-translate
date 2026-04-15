@@ -26,12 +26,19 @@ payload="$(jq -n \
     stream: false
   }')"
 
-response="$(curl -sS --fail-with-body "$ENDPOINT" \
+body_file="$(mktemp)"
+trap 'rm -f "$body_file"' EXIT
+http_code="$(curl -sS -o "$body_file" -w '%{http_code}' "$ENDPOINT" \
   -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
   -H "Content-Type: application/json" \
   -d "$payload")" || {
-    echo "deepseek: request failed: $response" >&2
+    echo "deepseek: curl failed: $(cat "$body_file")" >&2
     exit 1
   }
 
-echo "$response" | jq -r '.choices[0].message.content'
+if [ "$http_code" -ge 400 ]; then
+  echo "deepseek: HTTP $http_code: $(cat "$body_file")" >&2
+  exit 1
+fi
+
+jq -r '.choices[0].message.content' < "$body_file"
