@@ -22,29 +22,81 @@ the current selection or buffer into a split window.
 
 ## Install
 
+`jq` and `curl` are the only runtime deps — install via your package manager
+(`sudo apt install jq curl`). If you have no sudo, drop the `jq` static binary
+into `~/.local/bin` from the [jq releases page](https://github.com/jqlang/jq/releases).
+
+Then pick **one** of the two tracks below.
+
+### Option A — Manual (one clone covers CLI + Vim)
+
 ```bash
+# 1. Clone
 git clone https://github.com/MarsDoge/llm-translate.git ~/.local/share/llm-translate
-ln -s ~/.local/share/llm-translate/bin/llm-translate ~/.local/bin/llm-translate
+
+# 2. Expose CLI on $PATH
+mkdir -p ~/.local/bin
+ln -sf ~/.local/share/llm-translate/bin/llm-translate ~/.local/bin/llm-translate
 chmod +x ~/.local/share/llm-translate/bin/llm-translate
+
+# 3. Ensure ~/.local/bin is on $PATH
+echo "$PATH" | tr ':' '\n' | grep -qx "$HOME/.local/bin" || \
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# 4. Hook up Vim
+echo 'set runtimepath+=~/.local/share/llm-translate' >> ~/.vimrc
 ```
 
-Make sure `~/.local/bin` is on your `$PATH`.
+### Option B — vim-plug (auto-updating Vim plugin)
 
-### Vim / Neovim plugin
+Use this if you already manage plugins with [vim-plug](https://github.com/junegunn/vim-plug).
+You still need the CLI on `$PATH` — the plugin just shells out to it.
 
-With [vim-plug](https://github.com/junegunn/vim-plug):
+**First time only — bootstrap vim-plug itself:**
+
+```bash
+# Vim
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+# Neovim
+sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+```
+
+**In `~/.vimrc`:**
 
 ```vim
+call plug#begin()
 Plug 'MarsDoge/llm-translate'
+call plug#end()
 ```
 
-Or point directly at the cloned directory:
+Open Vim and run `:PlugInstall`. Then link the CLI that the plugin just
+cloned into `$PATH`:
 
-```vim
-set runtimepath+=~/.local/share/llm-translate
+```bash
+mkdir -p ~/.local/bin
+ln -sf ~/.vim/plugged/llm-translate/bin/llm-translate ~/.local/bin/llm-translate
+chmod +x ~/.vim/plugged/llm-translate/bin/llm-translate
+echo "$PATH" | tr ':' '\n' | grep -qx "$HOME/.local/bin" || \
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-Neovim's `packer`, `lazy.nvim`, and friends all work the same way.
+For Neovim's `lazy.nvim` / `packer`, do the same `ln -sf` in a `build =`
+hook; the package layout is identical.
+
+### Verify — no API key required
+
+```bash
+echo "Hello, world!" | llm-translate -p mymemory -t "Simplified Chinese"
+# → 您好，世界！
+```
+
+If you see the translation, both the CLI and `$PATH` are wired correctly.
+Next, configure an LLM provider below for higher-quality translations.
 
 ## Configure
 
