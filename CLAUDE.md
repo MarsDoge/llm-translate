@@ -16,7 +16,13 @@ stdin ─▶ bin/llm-translate ─▶ lib/providers/<name>.sh ─▶ API ─▶ 
 
 Three boundaries to respect:
 
-1. **CLI ↔ provider contract** (`bin/llm-translate` → `lib/providers/*.sh`): the dispatcher parses flags, builds the system prompt, and passes everything via environment variables. Providers read `$LLM_TRANSLATE_INPUT` / `$LLM_TRANSLATE_SYSTEM`, call their API, and write the translation to stdout — nothing else. Any new provider is a single ~30-line file in `lib/providers/` and needs no changes elsewhere; the dispatcher auto-discovers it via `--list-providers`.
+1. **CLI ↔ provider contract** (`bin/llm-translate` → `lib/providers/*.sh`): the dispatcher parses flags, builds the system prompt, and passes everything via environment variables. Providers read the subset they need and write the translation to stdout — nothing else. Any new provider is a single ~30-line file in `lib/providers/` and needs no changes elsewhere; the dispatcher auto-discovers it via `--list-providers`.
+
+   Exported env vars:
+   - `LLM_TRANSLATE_INPUT` — raw user text (always set)
+   - `LLM_TRANSLATE_SYSTEM` — pre-built system prompt (LLM providers)
+   - `LLM_TRANSLATE_MODEL` / `LLM_TRANSLATE_TEMPERATURE` — LLM tuning
+   - `LLM_TRANSLATE_TARGET_CODE` / `LLM_TRANSLATE_SOURCE_CODE` — BCP 47-ish codes for non-LLM MT APIs (e.g. `zh-CN`, `ja-JP`). The dispatcher's `normalize_lang_code()` maps natural names ("Simplified Chinese") to these codes; unknowns pass through unchanged so users can always give a raw ISO code. When adding a new MT-API provider, extend `normalize_lang_code()` only if the provider's code scheme matches mymemory's (BCP 47); providers with their own scheme (baidu uses `zh` not `zh-CN`, `jp` not `ja-JP`) should map internally.
 
 2. **Vim plugin split** (`plugin/` vs `autoload/`): `plugin/llm-translate.vim` runs at Vim startup and only sets config defaults, `:command` definitions, and the default `<leader>t` mapping. The real implementation (`llm_translate#selection`, `llm_translate#buffer`, private helpers) lives in `autoload/llm_translate.vim` and loads lazily on first invocation. **Do not define `funcname#with#hashes` in `plugin/`** — Vim enforces that autoload-named functions live in `autoload/<prefix>.vim` and throws `E746` otherwise (fixed in 657b73f; easy to re-break).
 

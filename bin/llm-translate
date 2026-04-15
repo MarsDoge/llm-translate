@@ -23,12 +23,14 @@ USAGE
   echo "hello world" | llm-translate -t "French"
 
 OPTIONS
-  -p, --provider NAME     Provider: deepseek | openai | claude | ollama
+  -p, --provider NAME     Provider: deepseek | openai | claude | ollama | mymemory
                           (default: \$LLM_TRANSLATE_PROVIDER or deepseek)
-  -m, --model NAME        Model name (provider-specific default)
-  -t, --target LANG       Target language (default: "Simplified Chinese")
-  -s, --source LANG       Source language hint (default: auto-detect)
-      --temperature N     Sampling temperature (default: 0.2)
+  -m, --model NAME        Model name (provider-specific default; unused for mymemory)
+  -t, --target LANG       Target language. Accepts natural name ("Japanese")
+                          or ISO code ("ja-JP"). Non-LLM providers need ISO.
+                          (default: "Simplified Chinese")
+  -s, --source LANG       Source language hint (default: auto)
+      --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --list-providers    List supported providers and exit
   -v, --version           Print version
   -h, --help              Show this help
@@ -41,11 +43,13 @@ ENVIRONMENT
   OPENAI_API_KEY          Key for the openai provider
   ANTHROPIC_API_KEY       Key for the claude provider
   OLLAMA_HOST             Base URL for ollama (default http://localhost:11434)
+  MYMEMORY_EMAIL          Optional email for mymemory; raises daily quota
 
 EXAMPLES
   echo "Hello, world!" | llm-translate -t "Japanese"
   llm-translate -p openai -m gpt-4o-mini < README.md
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
+  echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
 EOF
 }
 
@@ -94,10 +98,38 @@ else
   SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
 fi
 
+# --- language-code normalization (for non-LLM providers) -------------------
+# Maps natural-language names and common variants to BCP 47-ish codes
+# (mymemory-style). Unknown input is echoed back unchanged so ISO codes
+# passed directly by the user still work. LLM providers ignore this and
+# use the raw $TARGET / $SOURCE_LANG.
+normalize_lang_code() {
+  local lower
+  lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    zh|zh-cn|"simplified chinese"|chinese|中文|简体中文) echo "zh-CN" ;;
+    zh-tw|"traditional chinese"|繁体中文)              echo "zh-TW" ;;
+    en|en-us|en-gb|english|英语|英文)                   echo "en-US" ;;
+    ja|ja-jp|japanese|日语|日本語)                       echo "ja-JP" ;;
+    ko|ko-kr|korean|韩语|한국어)                         echo "ko-KR" ;;
+    fr|fr-fr|french|法语)                              echo "fr-FR" ;;
+    de|de-de|german|德语)                              echo "de-DE" ;;
+    es|es-es|spanish|西班牙语)                          echo "es-ES" ;;
+    ru|ru-ru|russian|俄语)                             echo "ru-RU" ;;
+    it|it-it|italian|意大利语)                          echo "it-IT" ;;
+    pt|pt-pt|portuguese|葡萄牙语)                       echo "pt-PT" ;;
+    ar|ar-sa|arabic|阿拉伯语)                           echo "ar-SA" ;;
+    auto)                                             echo "auto" ;;
+    *)                                                echo "$1" ;;
+  esac
+}
+
 export LLM_TRANSLATE_INPUT="$INPUT"
 export LLM_TRANSLATE_SYSTEM="$SYSTEM_PROMPT"
 export LLM_TRANSLATE_MODEL="$MODEL"
 export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
+export LLM_TRANSLATE_TARGET_CODE="$(normalize_lang_code "$TARGET")"
+export LLM_TRANSLATE_SOURCE_CODE="$(normalize_lang_code "$SOURCE_LANG")"
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"

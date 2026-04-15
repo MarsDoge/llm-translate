@@ -102,17 +102,49 @@ let g:llm_translate_map      = 0    " disable default <leader>t
 
 ## Providers
 
-| Provider  | Env var             | Default model                  |
-| --------- | ------------------- | ------------------------------ |
-| deepseek  | `DEEPSEEK_API_KEY`  | `deepseek-chat`                |
-| openai    | `OPENAI_API_KEY`    | `gpt-4o-mini`                  |
-| claude    | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001`    |
-| ollama    | *(none — local)*    | `qwen2.5:7b`                   |
+| Provider  | Env var             | Default model                  | Type   |
+| --------- | ------------------- | ------------------------------ | ------ |
+| deepseek  | `DEEPSEEK_API_KEY`  | `deepseek-chat`                | LLM    |
+| openai    | `OPENAI_API_KEY`    | `gpt-4o-mini`                  | LLM    |
+| claude    | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001`    | LLM    |
+| ollama    | *(none — local)*    | `qwen2.5:7b`                   | LLM    |
+| mymemory  | *(none — free tier)*| n/a                            | MT API |
+
+### Zero-config fallback: MyMemory
+
+If you just want to try the tool without signing up for anything:
+
+```bash
+echo "Hello, world!" | llm-translate -p mymemory -t "Simplified Chinese"
+# → 您好，世界！
+```
+
+MyMemory is a hosted translation service with a free tier (~5000 words/day
+per IP, no account). Set `MYMEMORY_EMAIL=you@example.com` to raise the daily
+quota to ~50000 words. Quality is lower than LLMs, and it has no real
+source-auto-detect — pass `-s` explicitly when translating non-English input.
+
+### Language codes
+
+LLM providers accept natural-language targets (`-t "Japanese"`), but hosted
+MT providers like MyMemory need BCP 47 codes (`-t ja-JP`). The CLI maps ~12
+common names automatically — both of these work:
+
+```bash
+llm-translate -p mymemory -t "Simplified Chinese" < input.txt
+llm-translate -p mymemory -t zh-CN               < input.txt
+```
+
+Unknown languages pass through unchanged, so you can always provide the exact
+code the provider expects.
+
+### Adding a new provider
 
 Adding a new provider is one file in `lib/providers/`. It receives the text on
-`$LLM_TRANSLATE_INPUT` and the system prompt on `$LLM_TRANSLATE_SYSTEM`, and
-prints the translation on stdout. See `lib/providers/deepseek.sh` for a ~30-line
-template.
+`$LLM_TRANSLATE_INPUT` and the system prompt on `$LLM_TRANSLATE_SYSTEM` (LLMs)
+or `$LLM_TRANSLATE_TARGET_CODE` / `$LLM_TRANSLATE_SOURCE_CODE` (MT APIs), and
+prints the translation on stdout. See `lib/providers/deepseek.sh` or
+`lib/providers/mymemory.sh` for ~30-line templates.
 
 ## Roadmap
 
