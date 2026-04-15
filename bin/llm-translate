@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# llm-translate — translate stdin via an LLM provider
+# https://github.com/MarsDoge/llm-translate
+set -euo pipefail
+
+VERSION="0.1.0"
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+LIB_DIR="${LLM_TRANSLATE_LIB:-$SCRIPT_DIR/../lib}"
+
+PROVIDER="${LLM_TRANSLATE_PROVIDER:-deepseek}"
+MODEL="${LLM_TRANSLATE_MODEL:-}"
+TARGET="${LLM_TRANSLATE_TARGET:-Simplified Chinese}"
+SOURCE_LANG="${LLM_TRANSLATE_SOURCE:-auto}"
+TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
+
+usage() {
+  cat <<EOF
+llm-translate $VERSION — translate stdin via an LLM provider
+
+USAGE
+  llm-translate [OPTIONS] < input.txt
+  echo "hello world" | llm-translate -t "French"
+
+OPTIONS
+  -p, --provider NAME     Provider: deepseek | openai | claude | ollama
+                          (default: \$LLM_TRANSLATE_PROVIDER or deepseek)
+  -m, --model NAME        Model name (provider-specific default)
+  -t, --target LANG       Target language (default: "Simplified Chinese")
+  -s, --source LANG       Source language hint (default: auto-detect)
+      --temperature N     Sampling temperature (default: 0.2)
+      --list-providers    List supported providers and exit
+  -v, --version           Print version
+  -h, --help              Show this help
+
+ENVIRONMENT
+  LLM_TRANSLATE_PROVIDER  Default provider
+  LLM_TRANSLATE_MODEL     Default model
+  LLM_TRANSLATE_TARGET    Default target language
+  DEEPSEEK_API_KEY        Key for the deepseek provider
+  OPENAI_API_KEY          Key for the openai provider
+  ANTHROPIC_API_KEY       Key for the claude provider
+  OLLAMA_HOST             Base URL for ollama (default http://localhost:11434)
+
+EXAMPLES
+  echo "Hello, world!" | llm-translate -t "Japanese"
+  llm-translate -p openai -m gpt-4o-mini < README.md
+  llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
+EOF
+}
+
+list_providers() {
+  find "$LIB_DIR/providers" -maxdepth 1 -name '*.sh' -printf '%f\n' 2>/dev/null \
+    | sed 's/\.sh$//' | sort
+}
+
+die() { echo "llm-translate: $*" >&2; exit 1; }
+
+# --- arg parsing -----------------------------------------------------------
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -p|--provider)     PROVIDER="$2"; shift 2 ;;
+    -m|--model)        MODEL="$2"; shift 2 ;;
+    -t|--target)       TARGET="$2"; shift 2 ;;
+    -s|--source)       SOURCE_LANG="$2"; shift 2 ;;
+    --temperature)     TEMPERATURE="$2"; shift 2 ;;
+    --list-providers)  list_providers; exit 0 ;;
+    -v|--version)      echo "$VERSION"; exit 0 ;;
+    -h|--help)         usage; exit 0 ;;
+    --)                shift; break ;;
+    -*)                die "unknown option: $1 (try --help)" ;;
+    *)                 die "unexpected argument: $1" ;;
+  esac
+done
+
+# --- deps ------------------------------------------------------------------
+command -v jq   >/dev/null 2>&1 || die "jq is required"
+command -v curl >/dev/null 2>&1 || die "curl is required"
+
+PROVIDER_SCRIPT="$LIB_DIR/providers/$PROVIDER.sh"
+[ -f "$PROVIDER_SCRIPT" ] || die "unknown provider: $PROVIDER (see --list-providers)"
+
+# --- read input ------------------------------------------------------------
+if [ -t 0 ]; then
+  die "no input on stdin; pipe text or redirect a file"
+fi
+INPUT="$(cat)"
+[ -n "$INPUT" ] || die "empty input"
+
+# --- build prompt ----------------------------------------------------------
+if [ "$SOURCE_LANG" = "auto" ]; then
+  SYSTEM_PROMPT="You are a professional translator. Translate the user's text into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting (markdown, indentation, newlines) clean and unchanged. Output only the translated text, with no preamble or commentary."
+else
+  SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
+fi
+
+export LLM_TRANSLATE_INPUT="$INPUT"
+export LLM_TRANSLATE_SYSTEM="$SYSTEM_PROMPT"
+export LLM_TRANSLATE_MODEL="$MODEL"
+export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
+
+# --- dispatch --------------------------------------------------------------
+exec bash "$PROVIDER_SCRIPT"
