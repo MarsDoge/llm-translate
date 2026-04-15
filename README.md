@@ -119,6 +119,24 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 
 ## CLI usage
 
+### Options
+
+| Flag                  | Default                | Notes                                                    |
+| --------------------- | ---------------------- | -------------------------------------------------------- |
+| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `mymemory` |
+| `-m`, `--model`       | provider-specific      | e.g. `deepseek-chat`, `gpt-4o-mini`; unused for mymemory |
+| `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Japanese"`) or ISO code (`ja-JP`)        |
+| `-s`, `--source`      | `auto`                 | required for mymemory when source is not English         |
+| `--temperature`       | `0.2`                  | LLM providers only                                       |
+| `--list-providers`    | —                      | print available providers and exit                       |
+| `-v`, `--version`     | —                      | print version                                            |
+| `-h`, `--help`        | —                      | show help                                                |
+
+Override defaults via env vars: `LLM_TRANSLATE_PROVIDER`, `LLM_TRANSLATE_MODEL`,
+`LLM_TRANSLATE_TARGET`, `LLM_TRANSLATE_TEMPERATURE`.
+
+### Examples
+
 ```bash
 echo "Hello, world!" | llm-translate -t "Japanese"
 
@@ -127,9 +145,9 @@ llm-translate -p openai -m gpt-4o-mini < README.md
 llm-translate -p claude -t "English" < notes.zh.md > notes.en.md
 
 llm-translate -p ollama -m qwen2.5:7b -t English < manpage.txt
-```
 
-Full option list: `llm-translate --help`.
+echo "Hello" | llm-translate -p mymemory -t zh-CN    # no API key
+```
 
 ## Vim usage
 
@@ -176,19 +194,36 @@ per IP, no account). Set `MYMEMORY_EMAIL=you@example.com` to raise the daily
 quota to ~50000 words. Quality is lower than LLMs, and it has no real
 source-auto-detect — pass `-s` explicitly when translating non-English input.
 
-### Language codes
+### Language aliases
 
-LLM providers accept natural-language targets (`-t "Japanese"`), but hosted
-MT providers like MyMemory need BCP 47 codes (`-t ja-JP`). The CLI maps ~12
-common names automatically — both of these work:
+The CLI normalizes natural names and common variants to BCP 47 codes for
+non-LLM providers. Any row below accepts all listed forms interchangeably:
+
+| Aliases                                                     | Normalized |
+| ----------------------------------------------------------- | ---------- |
+| Simplified Chinese, Chinese, zh, zh-CN, 中文, 简体中文        | `zh-CN`    |
+| Traditional Chinese, zh-TW, 繁体中文                         | `zh-TW`    |
+| English, en, en-US, en-GB, 英语, 英文                         | `en-US`    |
+| Japanese, ja, ja-JP, 日语, 日本語                             | `ja-JP`    |
+| Korean, ko, ko-KR, 韩语, 한국어                               | `ko-KR`    |
+| French, fr, fr-FR, 法语                                     | `fr-FR`    |
+| German, de, de-DE, 德语                                     | `de-DE`    |
+| Spanish, es, es-ES, 西班牙语                                 | `es-ES`    |
+| Russian, ru, ru-RU, 俄语                                    | `ru-RU`    |
+| Italian, it, it-IT, 意大利语                                 | `it-IT`    |
+| Portuguese, pt, pt-PT, 葡萄牙语                              | `pt-PT`    |
+| Arabic, ar, ar-SA, 阿拉伯语                                  | `ar-SA`    |
+
+Unknown input passes through unchanged, so any provider-specific code works.
+
+LLM providers (`deepseek` / `openai` / `claude` / `ollama`) understand any
+natural-language target directly and ignore the normalization table — it
+mainly matters for `mymemory` and future MT providers that need strict codes.
+For pairs not in the table, pass the ISO code explicitly:
 
 ```bash
-llm-translate -p mymemory -t "Simplified Chinese" < input.txt
-llm-translate -p mymemory -t zh-CN               < input.txt
+llm-translate -p mymemory -s en-US -t vi-VN < input.txt   # English → Vietnamese
 ```
-
-Unknown languages pass through unchanged, so you can always provide the exact
-code the provider expects.
 
 ### Adding a new provider
 
