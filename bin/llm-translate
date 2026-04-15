@@ -124,12 +124,15 @@ normalize_lang_code() {
   esac
 }
 
+LLM_TRANSLATE_TARGET_CODE="$(normalize_lang_code "$TARGET")"
+LLM_TRANSLATE_SOURCE_CODE="$(normalize_lang_code "$SOURCE_LANG")"
+
 export LLM_TRANSLATE_INPUT="$INPUT"
 export LLM_TRANSLATE_SYSTEM="$SYSTEM_PROMPT"
 export LLM_TRANSLATE_MODEL="$MODEL"
 export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
-export LLM_TRANSLATE_TARGET_CODE="$(normalize_lang_code "$TARGET")"
-export LLM_TRANSLATE_SOURCE_CODE="$(normalize_lang_code "$SOURCE_LANG")"
+export LLM_TRANSLATE_TARGET_CODE
+export LLM_TRANSLATE_SOURCE_CODE
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"
