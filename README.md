@@ -124,6 +124,30 @@ template.
 
 Contributions welcome — open an issue or PR.
 
+## Development
+
+If you want to hack on the plugin or CLI, point Vim at your clone directly
+instead of installing via a plugin manager — edits take effect on `:source`
+without needing a commit / push / `:PlugUpdate` cycle.
+
+```bash
+git clone git@github.com:MarsDoge/llm-translate.git ~/src/llm-translate
+ln -sf ~/src/llm-translate/bin/llm-translate ~/.local/bin/llm-translate
+```
+
+`~/.vimrc`:
+
+```vim
+set runtimepath+=~/src/llm-translate
+let g:llm_translate_provider = 'deepseek'
+```
+
+Run shellcheck before opening a PR:
+
+```bash
+shellcheck bin/llm-translate lib/providers/*.sh
+```
+
 ## License
 
 [MIT](./LICENSE)
