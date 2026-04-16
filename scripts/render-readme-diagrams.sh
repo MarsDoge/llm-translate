@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 START_MARKER='<!-- ARCHITECTURE_MERMAID:START -->'
 END_MARKER='<!-- ARCHITECTURE_MERMAID:END -->'
+ARCHITECTURE_DOC='docs/architecture.md'
 
 node_id() {
   printf '%s' "$1" | tr -c '[:alnum:]' '_'
@@ -61,36 +62,19 @@ print_edges() {
 }
 
 generate_mermaid_block() {
-  local locale="${1:-en}"
   classify_providers
-
   local input_label plugin_label autoload_label cli_label compat_label
   local direct_title compat_title local_title mt_title
 
-  case "$locale" in
-    zh)
-      input_label='Vim 可视选区 / 整个 buffer'
-      plugin_label='plugin/llm-translate.vim\n命令与映射'
-      autoload_label='autoload/llm_translate.vim\n选区 / buffer 执行入口'
-      cli_label='bin/llm-translate\n任务分发\ntranslate | optimize | bugfix'
-      compat_label='lib/openai_compat.sh\n共享 chat-completions helper'
-      direct_title='直连 provider 脚本'
-      compat_title='OpenAI 兼容 provider 脚本'
-      local_title='本地推理'
-      mt_title='翻译 API'
-      ;;
-    *)
-      input_label='Vim selection / whole buffer'
-      plugin_label='plugin/llm-translate.vim\ncommands + mappings'
-      autoload_label='autoload/llm_translate.vim\nselection / buffer runners'
-      cli_label='bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix'
-      compat_label='lib/openai_compat.sh\nshared chat-completions helper'
-      direct_title='Direct provider scripts'
-      compat_title='OpenAI-compatible provider scripts'
-      local_title='Local inference'
-      mt_title='Translation API'
-      ;;
-  esac
+  input_label='Vim selection / whole buffer'
+  plugin_label='plugin/llm-translate.vim\ncommands + mappings'
+  autoload_label='autoload/llm_translate.vim\nselection / buffer runners'
+  cli_label='bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix'
+  compat_label='lib/openai_compat.sh\nshared chat-completions helper'
+  direct_title='Direct provider scripts'
+  compat_title='OpenAI-compatible provider scripts'
+  local_title='Local inference'
+  mt_title='Translation API'
 
   printf '%s\n' '```mermaid'
   printf '%s\n' 'flowchart LR'
@@ -170,17 +154,11 @@ main() {
     --stdout)
       cat "$block_file"
       ;;
-    --stdout-zh)
-      generate_mermaid_block "zh" > "$block_file"
-      cat "$block_file"
-      ;;
     "")
-      replace_block "README.md" "$block_file"
-      generate_mermaid_block "zh" > "$block_file"
-      replace_block "README.zh-CN.md" "$block_file"
+      replace_block "$ARCHITECTURE_DOC" "$block_file"
       ;;
     *)
-      echo "usage: $0 [--stdout|--stdout-zh]" >&2
+      echo "usage: $0 [--stdout]" >&2
       rm -f "$block_file"
       exit 1
       ;;
