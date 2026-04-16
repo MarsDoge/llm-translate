@@ -20,7 +20,7 @@
 └─────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
 
-详细 Mermaid 架构图放在 [docs/architecture.md](./docs/architecture.md)；它会按
+详细 Mermaid 架构图放在 [docs/architecture.zh-CN.md](./docs/architecture.zh-CN.md)；它会按
 当前仓库路径由 `./scripts/render-readme-diagrams.sh` 自动生成。
 
 ## 特性
