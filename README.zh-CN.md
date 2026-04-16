@@ -30,7 +30,26 @@ provider —— **DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
 [jq releases](https://github.com/jqlang/jq/releases) 下一个静态二进制扔进
 `~/.local/bin` 也行。
 
-装好依赖之后，从下面两种方式里**任选一种**。
+### 一键安装（推荐，手动 runtimepath 模式）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash
+```
+
+如果你用 [vim-plug](https://github.com/junegunn/vim-plug) 管理插件：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash -s -- --mode vim-plug
+```
+
+安装脚本会把仓库 clone 到 `~/.local/share/llm-translate`（vim-plug 模式下是
+`~/.vim/plugged/llm-translate`），把 `llm-translate` 符号链接到
+`~/.local/bin`，必要时把它加进 `$PATH`，并更新 `~/.vimrc`（以及已存在的
+`~/.config/nvim/init.vim`）。可重复执行、幂等；`install.sh --uninstall`
+能把上述改动完整回滚。`install.sh --help` 可查看 `--prefix`、`--dir`、
+`--skip-vim` 等参数。
+
+### 或者手动安装 —— 从下面两种方式里**任选一种**。
 
 ### 方式 A —— 手动（一次 clone 同时搞定 CLI 和 Vim）
 
