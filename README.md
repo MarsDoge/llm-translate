@@ -10,10 +10,12 @@ plus zero-config **MyMemory** for translation) and a Vim plugin that runs
 any task on the current selection or buffer.
 
 ```text
-┌────────────┐     ┌──────────────┐     ┌───────────────┐
-│ vim visual │ ──▶ │ llm-translate│ ──▶ │  provider API │
-│ selection  │     │    (CLI)     │     │ (deepseek/…)  │
-└────────────┘     └──────────────┘     └───────────────┘
+┌─────────────────┐     ┌──────────────────────────┐     ┌───────────────┐
+│ vim selection   │ ──▶ │ llm-translate (CLI)      │ ──▶ │  provider API │
+│ or whole buffer │     │ task: translate          │     │ (deepseek/…)  │
+│                 │     │       optimize           │     │               │
+│                 │     │       bugfix             │     │               │
+└─────────────────┘     └──────────────────────────┘     └───────────────┘
 ```
 
 ## Features
