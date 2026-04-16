@@ -22,6 +22,19 @@
   - `install.sh --uninstall` 可完整回滚脚本写入的标记块和符号链接。
   - 其他参数：`--prefix`、`--dir`、`--skip-vim`。
   - 安装完成后会跑一次 mymemory 冒烟测试验证链路。
+- **`--task` 任务分发**：同一条管线现在支持三种任务，provider 脚本无需改动。
+  - `translate`（默认）—— 文本翻译，保留原有行为。
+  - `optimize` —— 代码重写为更清晰、更地道的版本；保留 public API、缩进和
+    观测行为；提示词强约束"仅输出代码、无 markdown 围栏"。
+  - `bugfix` —— 针对程序员常见的边界/空值/off-by-one/用错运算符/并发/资源
+    泄漏等缺陷做最小改动修复；每处改动上方会带一条
+    `FIX: <原因>` 注释，方便 `grep FIX:` 审阅。
+  - 两个代码类任务对 `mymemory` 会显式报错（它只做翻译）。
+- **Vim 对照 diff**：`:LLMOptimize` / `:LLMBugfix` 及默认映射
+  `<leader>o` / `<leader>b`，结果开在新 tab 的左右两栏里并自动 `:diffthis`，
+  用 `:diffget`/`:diffput` 按行拣选，`:tabclose` 一键丢弃。
+- **`LLM_TRANSLATE_TASK` 环境变量** 可设置默认任务；Vim 端新增
+  `g:llm_translate_map_optimize` 和 `g:llm_translate_map_bugfix` 开关。
 
 ## [0.1.0] — 2026-04-15
 

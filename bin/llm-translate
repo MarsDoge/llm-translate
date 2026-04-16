@@ -13,6 +13,7 @@ MODEL="${LLM_TRANSLATE_MODEL:-}"
 TARGET="${LLM_TRANSLATE_TARGET:-Simplified Chinese}"
 SOURCE_LANG="${LLM_TRANSLATE_SOURCE:-auto}"
 TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
+TASK="${LLM_TRANSLATE_TASK:-translate}"
 
 usage() {
   cat <<EOF
@@ -30,6 +31,12 @@ OPTIONS
                           or ISO code ("ja-JP"). Non-LLM providers need ISO.
                           (default: "Simplified Chinese")
   -s, --source LANG       Source language hint (default: auto)
+      --task WHAT         translate (default) | optimize | bugfix
+                          optimize rewrites the input as cleaner code; bugfix
+                          hunts for common programmer bugs (boundaries, null
+                          handling, off-by-one, wrong operator, etc) and
+                          patches with inline FIX: comments. Both require an
+                          LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --list-providers    List supported providers and exit
   -v, --version           Print version
@@ -50,6 +57,8 @@ EXAMPLES
   llm-translate -p openai -m gpt-4o-mini < README.md
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
   echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
+  llm-translate --task optimize < messy.py              # rewrite as cleaner Python
+  llm-translate --task bugfix   < buggy.go              # fix logic bugs, mark with FIX:
 EOF
 }
 
@@ -67,6 +76,7 @@ while [ $# -gt 0 ]; do
     -m|--model)        MODEL="$2"; shift 2 ;;
     -t|--target)       TARGET="$2"; shift 2 ;;
     -s|--source)       SOURCE_LANG="$2"; shift 2 ;;
+    --task)            TASK="$2"; shift 2 ;;
     --temperature)     TEMPERATURE="$2"; shift 2 ;;
     --list-providers)  list_providers; exit 0 ;;
     -v|--version)      echo "$VERSION"; exit 0 ;;
@@ -92,11 +102,86 @@ INPUT="$(cat)"
 [ -n "$INPUT" ] || die "empty input"
 
 # --- build prompt ----------------------------------------------------------
-if [ "$SOURCE_LANG" = "auto" ]; then
-  SYSTEM_PROMPT="You are a professional translator. Translate the user's text into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting (markdown, indentation, newlines) clean and unchanged. Output only the translated text, with no preamble or commentary."
-else
-  SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
-fi
+case "$TASK" in
+  translate)
+    if [ "$SOURCE_LANG" = "auto" ]; then
+      SYSTEM_PROMPT="You are a professional translator. Translate the user's text into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting (markdown, indentation, newlines) clean and unchanged. Output only the translated text, with no preamble or commentary."
+    else
+      SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
+    fi
+    ;;
+  optimize)
+    case "$PROVIDER" in
+      mymemory) die "--task optimize requires an LLM provider (mymemory is translation-only)" ;;
+    esac
+    SYSTEM_PROMPT="You are a senior software engineer. Rewrite the user's code snippet to be cleaner, more idiomatic, and more efficient while preserving observable behavior.
+
+Rules:
+- Output ONLY the optimized code. No prose, no explanations, no markdown fences, no leading or trailing blank lines beyond what the input had.
+- Detect the programming language from the input and keep the same language and file-level conventions.
+- Preserve the original indentation style (tabs vs spaces, indent width).
+- Keep public APIs, function names, and external behavior identical unless the change fixes a clear bug; in that case still match the original signature.
+- Prefer readable, idiomatic patterns over clever ones. Eliminate dead code, unused variables, and redundant comments.
+- Do not add framing text, headings, or commit-message-like summaries.
+- If the snippet is already optimal, return it unchanged."
+    ;;
+  bugfix)
+    case "$PROVIDER" in
+      mymemory) die "--task bugfix requires an LLM provider (mymemory is translation-only)" ;;
+    esac
+    SYSTEM_PROMPT="You are a senior software engineer reviewing the user's code snippet for common programmer bugs — the kind of defects that slip past code review because they only surface at edge cases. Your job is to identify clear bugs and patch them with MINIMAL changes, leaving everything else byte-identical.
+
+Focus on these defect patterns:
+
+Boundary and edge conditions:
+- Off-by-one errors: '<' vs '<=', inclusive vs exclusive ranges, first/last index
+- Empty collections: indexing without length check, empty-iteration assumptions
+- Zero and negative boundaries: division or modulo by zero, negative indices, unsigned underflow
+- Integer overflow in bounded-int languages (C, Go, Rust, Java, C#)
+- Floating-point equality compared with '=='
+- Unicode or multi-byte strings: byte length counted as character length, indexing into a codepoint midpoint
+- Date and time boundaries: month-end, year-end, leap year, DST, timezone confusion
+
+Null, empty, uninitialized:
+- Null / None / nil / undefined dereference, unchecked return value
+- Use before initialization, partial initialization
+- Optional or Maybe unwrapped without check
+
+Wrong-thing bugs:
+- Swapped arguments of the same type ('copy(dst, src)' reversed)
+- Wrong variable used ('x' where 'y' was meant in a pair)
+- Wrong operator ('&' vs '&&', '=' vs '==', '|' vs '||')
+- Inverted branch ('if !cond' where 'if cond' was meant)
+- Missing 'break' causing fallthrough, missing 'return'
+
+Concurrency and state:
+- Iterator invalidation (mutating a container while iterating)
+- Race conditions, TOCTOU
+- Shared mutable state or aliased containers
+- Missing lock or lock released too early
+
+Resource and error handling:
+- Missing cleanup (close, unlock, free, unsubscribe)
+- Resource leak on error path, double-free, use-after-free
+- Error silently swallowed, exception suppressed, return code ignored
+- Partial write or short read not retried
+
+Rules:
+- Output ONLY code. No prose outside the code, no explanations, no markdown fences, no headers.
+- Detect the programming language from the input and keep the same language.
+- Do NOT change style, naming, formatting, indentation, or refactor working code. Only patch real bugs.
+- Preserve public APIs, function signatures, and all non-defective surrounding lines exactly.
+- For every line you modify or add, insert a comment on its OWN LINE immediately above the change, in the language's native comment style. Format: 'FIX: <one-line reason>'. Example:
+      // FIX: guard against b == 0 to prevent division by zero
+      if b == 0 { return 0 }
+- Bias STRONGLY toward returning the input unchanged. Most snippets contain no real bugs. Only patch a line if you would stake your professional reputation on it being a genuine defect.
+- Never add TODO, NOTE, explanatory, or stylistic comments beyond the FIX: markers.
+- If you see no bugs, return the input UNCHANGED."
+    ;;
+  *)
+    die "unknown --task: $TASK (want translate, optimize, or bugfix)"
+    ;;
+esac
 
 # --- language-code normalization (for non-LLM providers) -------------------
 # Maps natural-language names and common variants to BCP 47-ish codes
@@ -133,6 +218,7 @@ export LLM_TRANSLATE_MODEL="$MODEL"
 export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
 export LLM_TRANSLATE_TARGET_CODE
 export LLM_TRANSLATE_SOURCE_CODE
+export LLM_TRANSLATE_TASK="$TASK"
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"

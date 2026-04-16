@@ -2,10 +2,12 @@
 
 English · [简体中文](./README.zh-CN.md)
 
-A tiny, dependency-light translation tool for the terminal and Vim, backed by
-large language models. One CLI, swappable providers — **DeepSeek**, **OpenAI**,
-**Anthropic Claude**, and local **Ollama** — with a Vim plugin that translates
-the current selection or buffer into a split window.
+A tiny, dependency-light tool for the terminal and Vim, backed by large
+language models. One CLI, three tasks — **translate** text, **optimize**
+code, or **bugfix** a snippet — with swappable providers (**DeepSeek**,
+**OpenAI**, **Anthropic Claude**, local **Ollama**, plus zero-config
+**MyMemory** for translation) and a Vim plugin that runs any task on the
+current selection or buffer.
 
 ```text
 ┌────────────┐     ┌──────────────┐     ┌───────────────┐
@@ -17,9 +19,12 @@ the current selection or buffer into a split window.
 ## Features
 
 - **Pure bash** — only `curl` and `jq` required.
-- **Multi-provider** — DeepSeek / OpenAI / Claude / Ollama, pick per invocation.
+- **Multi-provider** — DeepSeek / OpenAI / Claude / Ollama / MyMemory, pick per invocation.
+- **Three tasks, one pipeline** — `--task translate` (default), `--task optimize`
+  for code rewrite, `--task bugfix` for edge-case defect patches.
 - **Streaming-friendly CLI** — reads from stdin, writes to stdout. Pipe anything.
-- **Vim plugin** — `<leader>t` on a visual selection opens the translation in a split.
+- **Vim plugin** — `<leader>t` / `<leader>o` / `<leader>b` run translate / optimize
+  / bugfix on the visual selection. Code tasks open a two-pane diff in a fresh tab.
 - **Format-preserving prompt** — code blocks, paths, identifiers, and markdown are kept intact.
 
 ## Install
@@ -148,47 +153,67 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 | `-m`, `--model`       | provider-specific      | e.g. `deepseek-chat`, `gpt-4o-mini`; unused for mymemory |
 | `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Japanese"`) or ISO code (`ja-JP`)        |
 | `-s`, `--source`      | `auto`                 | required for mymemory when source is not English         |
+| `--task`              | `translate`            | `translate` / `optimize` / `bugfix` — LLM-only for the last two |
 | `--temperature`       | `0.2`                  | LLM providers only                                       |
 | `--list-providers`    | —                      | print available providers and exit                       |
 | `-v`, `--version`     | —                      | print version                                            |
 | `-h`, `--help`        | —                      | show help                                                |
 
 Override defaults via env vars: `LLM_TRANSLATE_PROVIDER`, `LLM_TRANSLATE_MODEL`,
-`LLM_TRANSLATE_TARGET`, `LLM_TRANSLATE_TEMPERATURE`.
+`LLM_TRANSLATE_TARGET`, `LLM_TRANSLATE_TEMPERATURE`, `LLM_TRANSLATE_TASK`.
 
 ### Examples
 
 ```bash
+# translate (default task)
 echo "Hello, world!" | llm-translate -t "Japanese"
-
 llm-translate -p openai -m gpt-4o-mini < README.md
-
 llm-translate -p claude -t "English" < notes.zh.md > notes.en.md
-
 llm-translate -p ollama -m qwen2.5:7b -t English < manpage.txt
+echo "Hello" | llm-translate -p mymemory -t zh-CN        # no API key
 
-echo "Hello" | llm-translate -p mymemory -t zh-CN    # no API key
+# optimize: rewrite as cleaner code in the same language
+llm-translate --task optimize -p deepseek < messy.py
+
+# bugfix: patch boundary / null / off-by-one / wrong-operator defects
+llm-translate --task bugfix -p deepseek < buggy.go
 ```
 
 ## Vim usage
 
-Visual-select a region, then press `<leader>t` (default mapping). The translated
-text opens in a scratch split with filetype `markdown`.
+Visual-select a region, then press one of the default mappings.
+Translate opens the result in a split; optimize and bugfix open a **two-pane
+diff in a fresh tab** (left = original, right = rewritten) so you can
+`:diffget` the bits you want and `:tabclose` to drop the rest.
+
+Default mappings (visual mode):
+
+| Mapping       | Task       | Result window                              |
+| ------------- | ---------- | ------------------------------------------ |
+| `<leader>t`   | translate  | scratch split, filetype `markdown`         |
+| `<leader>o`   | optimize   | new tab, two-pane diff, source filetype    |
+| `<leader>b`   | bugfix     | new tab, two-pane diff, source filetype    |
 
 Commands:
 
-| Command               | Scope                     |
-| --------------------- | ------------------------- |
-| `:LLMTranslate`       | current visual selection  |
-| `:LLMTranslateBuffer` | whole buffer              |
+| Command                | Scope                     |
+| ---------------------- | ------------------------- |
+| `:LLMTranslate`        | current visual selection  |
+| `:LLMTranslateBuffer`  | whole buffer              |
+| `:LLMOptimize`         | current visual selection  |
+| `:LLMOptimizeBuffer`   | whole buffer              |
+| `:LLMBugfix`           | current visual selection  |
+| `:LLMBugfixBuffer`     | whole buffer              |
 
 Per-buffer or per-session overrides:
 
 ```vim
-let g:llm_translate_provider = 'claude'
-let g:llm_translate_model    = 'claude-haiku-4-5-20251001'
-let g:llm_translate_target   = 'French'
-let g:llm_translate_map      = 0    " disable default <leader>t
+let g:llm_translate_provider     = 'claude'
+let g:llm_translate_model        = 'claude-haiku-4-5-20251001'
+let g:llm_translate_target       = 'French'
+let g:llm_translate_map          = 0    " disable default <leader>t
+let g:llm_translate_map_optimize = 0    " disable default <leader>o
+let g:llm_translate_map_bugfix   = 0    " disable default <leader>b
 ```
 
 ## Providers
