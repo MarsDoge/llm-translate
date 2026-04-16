@@ -5,8 +5,8 @@
 一个给终端和 Vim 用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
 **translate**（翻译文本）、**optimize**（优化代码）、**bugfix**（修常见 bug） ——
 可切换的 provider（**DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
-**Ollama**，以及零配置的 **MyMemory** 用于翻译）。配套的 Vim 插件可以对当前
-选区或整个 buffer 跑任意一个任务。
+**Ollama**、**阿里云 Coding Plan**，以及零配置的 **MyMemory** 用于翻译）。
+配套的 Vim 插件可以对当前选区或整个 buffer 跑任意一个任务。
 
 ```text
 ┌────────────┐     ┌──────────────┐     ┌───────────────┐
@@ -18,7 +18,7 @@
 ## 特性
 
 - **纯 bash 实现** —— 运行时只依赖 `curl` 和 `jq`。
-- **多 provider 可切换** —— DeepSeek / OpenAI / Claude / Ollama / MyMemory，每次调用自由选择。
+- **多 provider 可切换** —— DeepSeek / OpenAI / Claude / Ollama / Aliyun Coding Plan / MyMemory，每次调用自由选择。
 - **一条管线三个任务** —— `--task translate`（默认）、`--task optimize`（优化代码）、
   `--task bugfix`（修常见边界/空值/off-by-one 等 bug）。
 - **管道友好的 CLI** —— 从 stdin 读、写到 stdout，任何东西都能管道进去。
@@ -133,6 +133,7 @@ echo "Hello, world!" | llm-translate -p mymemory -t "Simplified Chinese"
 export DEEPSEEK_API_KEY=sk-...
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
+export ALIYUN_CODING_PLAN_API_KEY=sk-sp-...
 export OLLAMA_HOST=http://localhost:11434   # 非默认地址时才需要
 ```
 
@@ -150,7 +151,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 
 | Flag                  | 默认值                  | 说明                                                       |
 | --------------------- | ---------------------- | --------------------------------------------------------- |
-| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `mymemory`  |
+| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory`  |
 | `-m`, `--model`       | provider 各自的默认值    | 如 `deepseek-chat`、`gpt-4o-mini`；mymemory 忽略          |
 | `-t`, `--target`      | `Simplified Chinese`   | 自然语言名（`"Japanese"`）或 ISO 码（`ja-JP`）             |
 | `-s`, `--source`      | `auto`                 | mymemory 且源语言不是英文时必须显式指定                    |
@@ -169,6 +170,9 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 # translate（默认任务）
 echo "Hello, world!" | llm-translate -t "Japanese"
 llm-translate -p openai -m gpt-4o-mini < README.md
+llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
+llm-translate -p aliyun-codingplan -m kimi-k2.5 -t English < notes.zh.md
+llm-translate -p aliyun-codingplan -m glm-5 --task bugfix < buggy.go
 llm-translate -p claude -t "English" < notes.zh.md > notes.en.md
 llm-translate -p ollama -m qwen2.5:7b -t English < manpage.txt
 echo "Hello" | llm-translate -p mymemory -t zh-CN        # 不要 API key
@@ -223,8 +227,18 @@ let g:llm_translate_map_bugfix   = 0    " 禁用默认 <leader>b
 | deepseek  | `DEEPSEEK_API_KEY`  | `deepseek-chat`                | LLM    |
 | openai    | `OPENAI_API_KEY`    | `gpt-4o-mini`                  | LLM    |
 | claude    | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001`    | LLM    |
+| aliyun-codingplan | `ALIYUN_CODING_PLAN_API_KEY` | `qwen3.5-plus`    | LLM    |
 | ollama    | *（无，本地部署）*    | `qwen2.5:7b`                   | LLM    |
 | mymemory  | *（无，免费额度）*    | n/a                            | MT API |
+
+### 阿里云 Coding Plan
+
+`aliyun-codingplan` 走阿里云百炼 Model Studio 的 OpenAI 兼容 Coding Plan 入口：
+`https://coding.dashscope.aliyuncs.com/v1`，API Key 格式是 `sk-sp-...`。
+同时兼容 `CODING_PLAN_API_KEY` 和 `BAILIAN_CODING_PLAN_API_KEY` 这两个回退环境变量。
+官方文档列出的支持模型包含 `qwen3.5-plus`、`kimi-k2.5`、`glm-5` 等；需要哪个就用 `-m` 传哪个。
+阿里云官方文档将它定义为交互式 AI 编程工具套餐，不建议拿去做通用批处理后端
+或其他无交互 API 调用。
 
 ### 零配置兜底：MyMemory
 

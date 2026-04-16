@@ -24,7 +24,7 @@ USAGE
   echo "hello world" | llm-translate -t "French"
 
 OPTIONS
-  -p, --provider NAME     Provider: deepseek | openai | claude | ollama | mymemory
+  -p, --provider NAME     Provider: deepseek | openai | claude | ollama | aliyun-codingplan | mymemory
                           (default: \$LLM_TRANSLATE_PROVIDER or deepseek)
   -m, --model NAME        Model name (provider-specific default; unused for mymemory)
   -t, --target LANG       Target language. Accepts natural name ("Japanese")
@@ -49,12 +49,15 @@ ENVIRONMENT
   DEEPSEEK_API_KEY        Key for the deepseek provider
   OPENAI_API_KEY          Key for the openai provider
   ANTHROPIC_API_KEY       Key for the claude provider
+  ALIYUN_CODING_PLAN_API_KEY
+                          Key for the aliyun-codingplan provider (Aliyun Coding Plan)
   OLLAMA_HOST             Base URL for ollama (default http://localhost:11434)
   MYMEMORY_EMAIL          Optional email for mymemory; raises daily quota
 
 EXAMPLES
   echo "Hello, world!" | llm-translate -t "Japanese"
   llm-translate -p openai -m gpt-4o-mini < README.md
+  llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
   echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
   llm-translate --task optimize < messy.py              # rewrite as cleaner Python
