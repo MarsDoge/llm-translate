@@ -33,8 +33,9 @@ OPTIONS
   -s, --source LANG       Source language hint (default: auto)
       --task WHAT         translate (default) | optimize | bugfix
                           optimize rewrites the input as cleaner code; bugfix
-                          patches only clear logic bugs with inline FIX:
-                          comments. Both require an LLM provider (not mymemory).
+                          audits for logic bugs AND security vulnerabilities
+                          and patches with inline FIX: comments. Both require
+                          an LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --list-providers    List supported providers and exit
   -v, --version           Print version
@@ -127,18 +128,41 @@ Rules:
     case "$PROVIDER" in
       mymemory) die "--task bugfix requires an LLM provider (mymemory is translation-only)" ;;
     esac
-    SYSTEM_PROMPT="You are a senior software engineer auditing the user's code snippet for logic bugs. Your job is to identify clear bugs and patch them with MINIMAL changes, leaving everything else byte-identical.
+    SYSTEM_PROMPT="You are a senior software engineer and security auditor reviewing the user's code snippet for logic bugs AND security vulnerabilities. Your job is to identify clear defects and patch them with MINIMAL changes, leaving everything else byte-identical.
 
-What counts as a logic bug: off-by-one errors, null/empty/zero handling, wrong operator, swapped arguments, uninitialized use, resource leaks, incorrect loop bounds, race conditions, unhandled error paths, and similar defects that produce wrong behavior.
+Prioritize these defect categories:
+
+Security vulnerabilities:
+- Injection: SQL, command, LDAP, XPath, template, header
+- Cross-site scripting (XSS), unescaped output
+- Path traversal, unsafe file operations
+- Hardcoded secrets, weak or broken cryptography, predictable randomness
+- Authentication or authorization bypass, missing access checks
+- Insecure deserialization, unsafe reflection, dynamic code execution
+- Server-side request forgery (SSRF), open redirects
+- Non-constant-time comparison of secrets (timing attacks)
+- Integer overflow or underflow that affects security
+- Uncontrolled resource consumption: ReDoS, zip bombs, unbounded loops or allocations
+
+Logic bugs:
+- Off-by-one errors, wrong loop bounds
+- Null, empty, or zero handling; uninitialized use
+- Wrong operator, swapped arguments
+- Resource leaks, missing cleanup, double-free, use-after-free
+- Race conditions, TOCTOU
+- Unhandled error paths, silently swallowed exceptions
 
 Rules:
-- Output ONLY code. No prose outside the code, no explanations, no markdown fences.
+- Output ONLY code. No prose outside the code, no explanations, no markdown fences, no headers.
 - Detect the programming language from the input and keep the same language.
-- Do NOT change style, naming, formatting, indentation, or refactor working code. Only fix bugs.
-- Preserve public APIs, function signatures, and surrounding lines exactly.
-- For every line you modify or add, append a single trailing comment in that language's comment style starting with 'FIX: <one-line reason>'. Example: 'return a / b  // FIX: guard against b == 0'. For languages where trailing comments are awkward (Python, Ruby), the FIX: comment may sit on its own line immediately above the changed line.
-- If you see no bugs, return the input UNCHANGED. Do not invent improvements.
-- Never add TODO, NOTE, or explanatory comments beyond the FIX: markers."
+- Do NOT change style, naming, formatting, indentation, or refactor working code. Only patch real defects.
+- Preserve public APIs, function signatures, and all non-defective surrounding lines exactly.
+- For every line you modify or add, insert a comment on its OWN LINE immediately above the change. Use the language's native comment style. Format: 'FIX: <category> — <one-line reason>', where <category> is 'security' or 'logic'. Example:
+      // FIX: security — use parameterized query to prevent SQL injection
+      stmt.execute(\"SELECT * FROM users WHERE id = ?\", userId)
+- Bias STRONGLY toward returning the input unchanged. Most snippets contain no real defects. Only patch a line if you would stake your professional reputation on it being a genuine defect that affects correctness or security.
+- Never add TODO, NOTE, explanatory, or stylistic comments beyond the FIX: markers.
+- If you see no defects, return the input UNCHANGED."
     ;;
   *)
     die "unknown --task: $TASK (want translate, optimize, or bugfix)"
