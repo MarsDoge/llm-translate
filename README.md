@@ -5,9 +5,9 @@ English · [简体中文](./README.zh-CN.md)
 A tiny, dependency-light tool for the terminal and Vim, backed by large
 language models. One CLI, three tasks — **translate** text, **optimize**
 code, or **bugfix** a snippet — with swappable providers (**DeepSeek**,
-**OpenAI**, **Anthropic Claude**, local **Ollama**, plus zero-config
-**MyMemory** for translation) and a Vim plugin that runs any task on the
-current selection or buffer.
+**OpenAI**, **Anthropic Claude**, local **Ollama**, **Aliyun Coding Plan**,
+plus zero-config **MyMemory** for translation) and a Vim plugin that runs
+any task on the current selection or buffer.
 
 ```text
 ┌────────────┐     ┌──────────────┐     ┌───────────────┐
@@ -19,7 +19,7 @@ current selection or buffer.
 ## Features
 
 - **Pure bash** — only `curl` and `jq` required.
-- **Multi-provider** — DeepSeek / OpenAI / Claude / Ollama / MyMemory, pick per invocation.
+- **Multi-provider** — DeepSeek / OpenAI / Claude / Ollama / Aliyun Coding Plan / MyMemory, pick per invocation.
 - **Three tasks, one pipeline** — `--task translate` (default), `--task optimize`
   for code rewrite, `--task bugfix` for edge-case defect patches.
 - **Streaming-friendly CLI** — reads from stdin, writes to stdout. Pipe anything.
@@ -132,6 +132,7 @@ Set the API key for whichever provider you use:
 export DEEPSEEK_API_KEY=sk-...
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
+export ALIYUN_CODING_PLAN_API_KEY=sk-sp-...
 export OLLAMA_HOST=http://localhost:11434   # only if non-default
 ```
 
@@ -149,7 +150,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 
 | Flag                  | Default                | Notes                                                    |
 | --------------------- | ---------------------- | -------------------------------------------------------- |
-| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `mymemory` |
+| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory` |
 | `-m`, `--model`       | provider-specific      | e.g. `deepseek-chat`, `gpt-4o-mini`; unused for mymemory |
 | `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Japanese"`) or ISO code (`ja-JP`)        |
 | `-s`, `--source`      | `auto`                 | required for mymemory when source is not English         |
@@ -168,6 +169,9 @@ Override defaults via env vars: `LLM_TRANSLATE_PROVIDER`, `LLM_TRANSLATE_MODEL`,
 # translate (default task)
 echo "Hello, world!" | llm-translate -t "Japanese"
 llm-translate -p openai -m gpt-4o-mini < README.md
+llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
+llm-translate -p aliyun-codingplan -m kimi-k2.5 -t English < notes.zh.md
+llm-translate -p aliyun-codingplan -m glm-5 --task bugfix < buggy.go
 llm-translate -p claude -t "English" < notes.zh.md > notes.en.md
 llm-translate -p ollama -m qwen2.5:7b -t English < manpage.txt
 echo "Hello" | llm-translate -p mymemory -t zh-CN        # no API key
@@ -223,8 +227,21 @@ let g:llm_translate_map_bugfix   = 0    " disable default <leader>b
 | deepseek  | `DEEPSEEK_API_KEY`  | `deepseek-chat`                | LLM    |
 | openai    | `OPENAI_API_KEY`    | `gpt-4o-mini`                  | LLM    |
 | claude    | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001`    | LLM    |
+| aliyun-codingplan | `ALIYUN_CODING_PLAN_API_KEY` | `qwen3.5-plus`    | LLM    |
 | ollama    | *(none — local)*    | `qwen2.5:7b`                   | LLM    |
 | mymemory  | *(none — free tier)*| n/a                            | MT API |
+
+### Aliyun Coding Plan
+
+`aliyun-codingplan` uses Aliyun Model Studio's OpenAI-compatible Coding Plan
+endpoint: `https://coding.dashscope.aliyuncs.com/v1`. The key format is
+`sk-sp-...`.
+The provider also accepts `CODING_PLAN_API_KEY` and
+`BAILIAN_CODING_PLAN_API_KEY` as compatibility fallbacks.
+Documented supported models include `qwen3.5-plus`, `kimi-k2.5`, `glm-5`,
+and other Coding Plan models; pass the desired model via `-m`.
+Official docs describe Coding Plan as an interactive coding-tools offering, so
+use it accordingly instead of generic batch backends or unrelated API tooling.
 
 ### Zero-config fallback: MyMemory
 
