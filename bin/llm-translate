@@ -31,9 +31,10 @@ OPTIONS
                           or ISO code ("ja-JP"). Non-LLM providers need ISO.
                           (default: "Simplified Chinese")
   -s, --source LANG       Source language hint (default: auto)
-      --task WHAT         translate (default) | optimize — optimize rewrites the
-                          input as cleaner code in the same language. Requires
-                          an LLM provider (not mymemory).
+      --task WHAT         translate (default) | optimize | bugfix
+                          optimize rewrites the input as cleaner code; bugfix
+                          patches only clear logic bugs with inline FIX:
+                          comments. Both require an LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --list-providers    List supported providers and exit
   -v, --version           Print version
@@ -55,6 +56,7 @@ EXAMPLES
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
   echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
   llm-translate --task optimize < messy.py              # rewrite as cleaner Python
+  llm-translate --task bugfix   < buggy.go              # fix logic bugs, mark with FIX:
 EOF
 }
 
@@ -121,8 +123,25 @@ Rules:
 - Do not add framing text, headings, or commit-message-like summaries.
 - If the snippet is already optimal, return it unchanged."
     ;;
+  bugfix)
+    case "$PROVIDER" in
+      mymemory) die "--task bugfix requires an LLM provider (mymemory is translation-only)" ;;
+    esac
+    SYSTEM_PROMPT="You are a senior software engineer auditing the user's code snippet for logic bugs. Your job is to identify clear bugs and patch them with MINIMAL changes, leaving everything else byte-identical.
+
+What counts as a logic bug: off-by-one errors, null/empty/zero handling, wrong operator, swapped arguments, uninitialized use, resource leaks, incorrect loop bounds, race conditions, unhandled error paths, and similar defects that produce wrong behavior.
+
+Rules:
+- Output ONLY code. No prose outside the code, no explanations, no markdown fences.
+- Detect the programming language from the input and keep the same language.
+- Do NOT change style, naming, formatting, indentation, or refactor working code. Only fix bugs.
+- Preserve public APIs, function signatures, and surrounding lines exactly.
+- For every line you modify or add, append a single trailing comment in that language's comment style starting with 'FIX: <one-line reason>'. Example: 'return a / b  // FIX: guard against b == 0'. For languages where trailing comments are awkward (Python, Ruby), the FIX: comment may sit on its own line immediately above the changed line.
+- If you see no bugs, return the input UNCHANGED. Do not invent improvements.
+- Never add TODO, NOTE, or explanatory comments beyond the FIX: markers."
+    ;;
   *)
-    die "unknown --task: $TASK (want translate or optimize)"
+    die "unknown --task: $TASK (want translate, optimize, or bugfix)"
     ;;
 esac
 

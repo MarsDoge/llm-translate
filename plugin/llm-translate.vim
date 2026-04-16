@@ -11,6 +11,7 @@
 "   let g:llm_translate_filetype = 'markdown'
 "   let g:llm_translate_map      = 1                   " set 0 to disable default <leader>t
 "   let g:llm_translate_map_optimize = 1               " set 0 to disable default <leader>o
+"   let g:llm_translate_map_bugfix   = 1               " set 0 to disable default <leader>b
 
 if exists('g:loaded_llm_translate')
   finish
@@ -26,11 +27,14 @@ let g:llm_translate_split    = get(g:, 'llm_translate_split', 'belowright')
 let g:llm_translate_filetype = get(g:, 'llm_translate_filetype', 'markdown')
 let g:llm_translate_map      = get(g:, 'llm_translate_map', 1)
 let g:llm_translate_map_optimize = get(g:, 'llm_translate_map_optimize', 1)
+let g:llm_translate_map_bugfix   = get(g:, 'llm_translate_map_bugfix', 1)
 
 command! -range LLMTranslate          call llm_translate#selection()
 command!        LLMTranslateBuffer    call llm_translate#buffer()
 command! -range LLMOptimize           call llm_translate#optimize()
 command!        LLMOptimizeBuffer     call llm_translate#optimize_buffer()
+command! -range LLMBugfix             call llm_translate#bugfix()
+command!        LLMBugfixBuffer       call llm_translate#bugfix_buffer()
 
 if g:llm_translate_map
   if !hasmapto('<Plug>LLMTranslate', 'x')
@@ -41,5 +45,11 @@ endif
 if g:llm_translate_map_optimize
   if !hasmapto('<Plug>LLMOptimize', 'x')
     xnoremap <silent> <leader>o :<C-u>call llm_translate#optimize()<CR>
+  endif
+endif
+
+if g:llm_translate_map_bugfix
+  if !hasmapto('<Plug>LLMBugfix', 'x')
+    xnoremap <silent> <leader>b :<C-u>call llm_translate#bugfix()<CR>
   endif
 endif

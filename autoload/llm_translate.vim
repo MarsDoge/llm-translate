@@ -63,15 +63,16 @@ function! llm_translate#buffer() abort
   call s:Run(join(getline(1, '$'), "\n"))
 endfunction
 
-" --- optimize --------------------------------------------------------------
+" --- code tasks (optimize, bugfix) ----------------------------------------
+" Both open a two-pane diff in a fresh tab: left = original, right = rewritten.
 
-function! s:RunOptimize(text, ft) abort
+function! s:RunCodeTask(task, text, ft) abort
   if empty(a:text)
     echohl WarningMsg | echo 'llm-translate: empty input' | echohl None
     return
   endif
-  let l:cmd = s:BuildCmd('optimize')
-  echo 'llm-translate: optimizing via ' . g:llm_translate_provider . '…'
+  let l:cmd = s:BuildCmd(a:task)
+  echo 'llm-translate: ' . a:task . ' via ' . g:llm_translate_provider . '…'
   let l:result = system(l:cmd, a:text)
   redraw | echo ''
   if v:shell_error != 0
@@ -83,22 +84,30 @@ function! s:RunOptimize(text, ft) abort
   let l:before = split(a:text, "\n", 1)
   let l:after  = split(l:result, "\n", 1)
   let l:ft = empty(a:ft) ? 'text' : a:ft
-  " Open a dedicated tab so the user's layout stays intact. :tabclose to exit.
+  " Dedicated tab so the user's layout stays intact. :tabclose to exit.
   tabnew
-  call s:FillScratch(l:before, '[optimize:original]', l:ft)
+  call s:FillScratch(l:before, '[' . a:task . ':original]', l:ft)
   diffthis
   vnew
   call s:FillScratch(l:after,
-        \ '[optimize:' . g:llm_translate_provider . ']',
+        \ '[' . a:task . ':' . g:llm_translate_provider . ']',
         \ l:ft)
   diffthis
   wincmd h
 endfunction
 
 function! llm_translate#optimize() range abort
-  call s:RunOptimize(s:CaptureSelection(), &filetype)
+  call s:RunCodeTask('optimize', s:CaptureSelection(), &filetype)
 endfunction
 
 function! llm_translate#optimize_buffer() abort
-  call s:RunOptimize(join(getline(1, '$'), "\n"), &filetype)
+  call s:RunCodeTask('optimize', join(getline(1, '$'), "\n"), &filetype)
+endfunction
+
+function! llm_translate#bugfix() range abort
+  call s:RunCodeTask('bugfix', s:CaptureSelection(), &filetype)
+endfunction
+
+function! llm_translate#bugfix_buffer() abort
+  call s:RunCodeTask('bugfix', join(getline(1, '$'), "\n"), &filetype)
 endfunction
