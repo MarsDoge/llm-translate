@@ -13,6 +13,7 @@ MODEL="${LLM_TRANSLATE_MODEL:-}"
 TARGET="${LLM_TRANSLATE_TARGET:-Simplified Chinese}"
 SOURCE_LANG="${LLM_TRANSLATE_SOURCE:-auto}"
 TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
+TASK="${LLM_TRANSLATE_TASK:-translate}"
 
 usage() {
   cat <<EOF
@@ -30,6 +31,9 @@ OPTIONS
                           or ISO code ("ja-JP"). Non-LLM providers need ISO.
                           (default: "Simplified Chinese")
   -s, --source LANG       Source language hint (default: auto)
+      --task WHAT         translate (default) | optimize — optimize rewrites the
+                          input as cleaner code in the same language. Requires
+                          an LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --list-providers    List supported providers and exit
   -v, --version           Print version
@@ -50,6 +54,7 @@ EXAMPLES
   llm-translate -p openai -m gpt-4o-mini < README.md
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
   echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
+  llm-translate --task optimize < messy.py              # rewrite as cleaner Python
 EOF
 }
 
@@ -67,6 +72,7 @@ while [ $# -gt 0 ]; do
     -m|--model)        MODEL="$2"; shift 2 ;;
     -t|--target)       TARGET="$2"; shift 2 ;;
     -s|--source)       SOURCE_LANG="$2"; shift 2 ;;
+    --task)            TASK="$2"; shift 2 ;;
     --temperature)     TEMPERATURE="$2"; shift 2 ;;
     --list-providers)  list_providers; exit 0 ;;
     -v|--version)      echo "$VERSION"; exit 0 ;;
@@ -92,11 +98,33 @@ INPUT="$(cat)"
 [ -n "$INPUT" ] || die "empty input"
 
 # --- build prompt ----------------------------------------------------------
-if [ "$SOURCE_LANG" = "auto" ]; then
-  SYSTEM_PROMPT="You are a professional translator. Translate the user's text into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting (markdown, indentation, newlines) clean and unchanged. Output only the translated text, with no preamble or commentary."
-else
-  SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
-fi
+case "$TASK" in
+  translate)
+    if [ "$SOURCE_LANG" = "auto" ]; then
+      SYSTEM_PROMPT="You are a professional translator. Translate the user's text into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting (markdown, indentation, newlines) clean and unchanged. Output only the translated text, with no preamble or commentary."
+    else
+      SYSTEM_PROMPT="You are a professional translator. Translate the user's text from ${SOURCE_LANG} into ${TARGET}. Preserve code blocks, commands, file paths, identifiers, error codes, register names, and function names. Keep formatting clean. Output only the translated text, with no preamble or commentary."
+    fi
+    ;;
+  optimize)
+    case "$PROVIDER" in
+      mymemory) die "--task optimize requires an LLM provider (mymemory is translation-only)" ;;
+    esac
+    SYSTEM_PROMPT="You are a senior software engineer. Rewrite the user's code snippet to be cleaner, more idiomatic, and more efficient while preserving observable behavior.
+
+Rules:
+- Output ONLY the optimized code. No prose, no explanations, no markdown fences, no leading or trailing blank lines beyond what the input had.
+- Detect the programming language from the input and keep the same language and file-level conventions.
+- Preserve the original indentation style (tabs vs spaces, indent width).
+- Keep public APIs, function names, and external behavior identical unless the change fixes a clear bug; in that case still match the original signature.
+- Prefer readable, idiomatic patterns over clever ones. Eliminate dead code, unused variables, and redundant comments.
+- Do not add framing text, headings, or commit-message-like summaries.
+- If the snippet is already optimal, return it unchanged."
+    ;;
+  *)
+    die "unknown --task: $TASK (want translate or optimize)"
+    ;;
+esac
 
 # --- language-code normalization (for non-LLM providers) -------------------
 # Maps natural-language names and common variants to BCP 47-ish codes
@@ -133,6 +161,7 @@ export LLM_TRANSLATE_MODEL="$MODEL"
 export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
 export LLM_TRANSLATE_TARGET_CODE
 export LLM_TRANSLATE_SOURCE_CODE
+export LLM_TRANSLATE_TASK="$TASK"
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"
