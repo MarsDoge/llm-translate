@@ -18,38 +18,38 @@ flowchart LR
   CLI["bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix"]
   Compat["lib/openai_compat.sh\nshared chat-completions helper"]
   Input --> Plugin --> Autoload --> CLI
-  subgraph Direct_provider_scripts["Direct provider scripts"]
-    Direct_provider_scripts_claude["lib/providers/claude.sh"]
-    Direct_provider_scripts_deepseek["lib/providers/deepseek.sh"]
-    Direct_provider_scripts_openai["lib/providers/openai.sh"]
+  subgraph direct["Direct provider scripts"]
+    direct_claude["lib/providers/claude.sh"]
+    direct_deepseek["lib/providers/deepseek.sh"]
+    direct_openai["lib/providers/openai.sh"]
   end
-  subgraph OpenAI_compatible_provider_scripts["OpenAI-compatible provider scripts"]
-    OpenAI_compatible_provider_scripts_aliyun_codingplan["lib/providers/aliyun-codingplan.sh"]
-    OpenAI_compatible_provider_scripts_doubao["lib/providers/doubao.sh"]
-    OpenAI_compatible_provider_scripts_grok["lib/providers/grok.sh"]
-    OpenAI_compatible_provider_scripts_kimi["lib/providers/kimi.sh"]
-    OpenAI_compatible_provider_scripts_mistral["lib/providers/mistral.sh"]
-    OpenAI_compatible_provider_scripts_qwen["lib/providers/qwen.sh"]
-    OpenAI_compatible_provider_scripts_zhipu["lib/providers/zhipu.sh"]
+  subgraph compat_group["OpenAI-compatible provider scripts"]
+    compat_group_aliyun_codingplan["lib/providers/aliyun-codingplan.sh"]
+    compat_group_doubao["lib/providers/doubao.sh"]
+    compat_group_grok["lib/providers/grok.sh"]
+    compat_group_kimi["lib/providers/kimi.sh"]
+    compat_group_mistral["lib/providers/mistral.sh"]
+    compat_group_qwen["lib/providers/qwen.sh"]
+    compat_group_zhipu["lib/providers/zhipu.sh"]
   end
-  subgraph Local_inference["Local inference"]
-    Local_inference_ollama["lib/providers/ollama.sh"]
+  subgraph local["Local inference"]
+    local_ollama["lib/providers/ollama.sh"]
   end
-  subgraph Translation_API["Translation API"]
-    Translation_API_mymemory["lib/providers/mymemory.sh"]
+  subgraph translation["Translation API"]
+    translation_mymemory["lib/providers/mymemory.sh"]
   end
   CLI --> Compat
-  CLI --> Direct_provider_scripts_claude
-  CLI --> Direct_provider_scripts_deepseek
-  CLI --> Direct_provider_scripts_openai
-  CLI --> Local_inference_ollama
-  CLI --> Translation_API_mymemory
-  Compat --> OpenAI_compatible_provider_scripts_aliyun_codingplan
-  Compat --> OpenAI_compatible_provider_scripts_doubao
-  Compat --> OpenAI_compatible_provider_scripts_grok
-  Compat --> OpenAI_compatible_provider_scripts_kimi
-  Compat --> OpenAI_compatible_provider_scripts_mistral
-  Compat --> OpenAI_compatible_provider_scripts_qwen
-  Compat --> OpenAI_compatible_provider_scripts_zhipu
+  CLI --> direct_claude
+  CLI --> direct_deepseek
+  CLI --> direct_openai
+  CLI --> local_ollama
+  CLI --> translation_mymemory
+  Compat --> compat_group_aliyun_codingplan
+  Compat --> compat_group_doubao
+  Compat --> compat_group_grok
+  Compat --> compat_group_kimi
+  Compat --> compat_group_mistral
+  Compat --> compat_group_qwen
+  Compat --> compat_group_zhipu
 ```
 <!-- ARCHITECTURE_MERMAID:END -->
