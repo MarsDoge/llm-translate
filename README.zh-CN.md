@@ -2,10 +2,11 @@
 
 [English](./README.md) · 简体中文
 
-一个给终端和 Vim 用的轻量翻译工具，底层由大语言模型驱动。单一 CLI、可切换的
-provider —— **DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
-**Ollama**，以及零配置的 **MyMemory** 兜底。配套的 Vim 插件可以把当前选区或
-整个 buffer 翻译到右下方分屏。
+一个给终端和 Vim 用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
+**translate**（翻译文本）、**optimize**（优化代码）、**bugfix**（修常见 bug） ——
+可切换的 provider（**DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
+**Ollama**，以及零配置的 **MyMemory** 用于翻译）。配套的 Vim 插件可以对当前
+选区或整个 buffer 跑任意一个任务。
 
 ```text
 ┌────────────┐     ┌──────────────┐     ┌───────────────┐
@@ -18,8 +19,11 @@ provider —— **DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
 
 - **纯 bash 实现** —— 运行时只依赖 `curl` 和 `jq`。
 - **多 provider 可切换** —— DeepSeek / OpenAI / Claude / Ollama / MyMemory，每次调用自由选择。
+- **一条管线三个任务** —— `--task translate`（默认）、`--task optimize`（优化代码）、
+  `--task bugfix`（修常见边界/空值/off-by-one 等 bug）。
 - **管道友好的 CLI** —— 从 stdin 读、写到 stdout，任何东西都能管道进去。
-- **Vim 插件** —— 可视选中后按 `<leader>t`，翻译结果直接在分屏里打开。
+- **Vim 插件** —— `<leader>t` / `<leader>o` / `<leader>b` 分别触发 translate /
+  optimize / bugfix；代码类任务会在新 tab 里打开左右对比 diff。
 - **保留格式的 prompt** —— 代码块、路径、标识符、markdown 原样保留。
 - **零配置兜底** —— 没配任何 API key 时用 `-p mymemory` 依然能翻译。
 
@@ -150,47 +154,66 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 | `-m`, `--model`       | provider 各自的默认值    | 如 `deepseek-chat`、`gpt-4o-mini`；mymemory 忽略          |
 | `-t`, `--target`      | `Simplified Chinese`   | 自然语言名（`"Japanese"`）或 ISO 码（`ja-JP`）             |
 | `-s`, `--source`      | `auto`                 | mymemory 且源语言不是英文时必须显式指定                    |
+| `--task`              | `translate`            | `translate` / `optimize` / `bugfix`（后两个仅 LLM）        |
 | `--temperature`       | `0.2`                  | 仅 LLM provider 使用                                      |
 | `--list-providers`    | —                      | 列出所有 provider 并退出                                   |
 | `-v`, `--version`     | —                      | 打印版本号                                                 |
 | `-h`, `--help`        | —                      | 打印帮助                                                   |
 
 也可以用环境变量覆盖默认：`LLM_TRANSLATE_PROVIDER`、`LLM_TRANSLATE_MODEL`、
-`LLM_TRANSLATE_TARGET`、`LLM_TRANSLATE_TEMPERATURE`。
+`LLM_TRANSLATE_TARGET`、`LLM_TRANSLATE_TEMPERATURE`、`LLM_TRANSLATE_TASK`。
 
 ### 示例
 
 ```bash
+# translate（默认任务）
 echo "Hello, world!" | llm-translate -t "Japanese"
-
 llm-translate -p openai -m gpt-4o-mini < README.md
-
 llm-translate -p claude -t "English" < notes.zh.md > notes.en.md
-
 llm-translate -p ollama -m qwen2.5:7b -t English < manpage.txt
+echo "Hello" | llm-translate -p mymemory -t zh-CN        # 不要 API key
 
-echo "Hello" | llm-translate -p mymemory -t zh-CN    # 不要 API key
+# optimize：用更清晰、更地道的写法重写同一段代码
+llm-translate --task optimize -p deepseek < messy.py
+
+# bugfix：修边界/空值/off-by-one/用错运算符之类常见 bug
+llm-translate --task bugfix -p deepseek < buggy.go
 ```
 
 ## Vim 用法
 
-可视模式选中一段，按 `<leader>t`（默认映射），翻译结果会在下方 scratch split
-中打开，filetype 为 `markdown`。
+可视模式选中一段，按下面任意一个默认映射即可。translate 在下方 split 里
+显示结果；optimize / bugfix 会在**新 tab 里打开左右对比 diff**（左边原始、
+右边改写后），可以 `:diffget` 拿你想要的部分，然后 `:tabclose` 丢掉其余的。
+
+默认映射（可视模式）：
+
+| 映射         | 任务      | 结果窗口                                 |
+| ----------- | -------- | --------------------------------------- |
+| `<leader>t` | translate | scratch split，filetype `markdown`      |
+| `<leader>o` | optimize  | 新 tab，左右 diff，沿用源文件 filetype   |
+| `<leader>b` | bugfix    | 新 tab，左右 diff，沿用源文件 filetype   |
 
 命令：
 
-| 命令                   | 作用范围                |
-| --------------------- | ---------------------- |
-| `:LLMTranslate`       | 当前可视选区             |
-| `:LLMTranslateBuffer` | 整个 buffer             |
+| 命令                    | 作用范围                |
+| ---------------------- | ---------------------- |
+| `:LLMTranslate`        | 当前可视选区             |
+| `:LLMTranslateBuffer`  | 整个 buffer             |
+| `:LLMOptimize`         | 当前可视选区             |
+| `:LLMOptimizeBuffer`   | 整个 buffer             |
+| `:LLMBugfix`           | 当前可视选区             |
+| `:LLMBugfixBuffer`     | 整个 buffer             |
 
 按 buffer 或按 session 覆盖配置：
 
 ```vim
-let g:llm_translate_provider = 'claude'
-let g:llm_translate_model    = 'claude-haiku-4-5-20251001'
-let g:llm_translate_target   = 'French'
-let g:llm_translate_map      = 0    " 禁用默认 <leader>t
+let g:llm_translate_provider     = 'claude'
+let g:llm_translate_model        = 'claude-haiku-4-5-20251001'
+let g:llm_translate_target       = 'French'
+let g:llm_translate_map          = 0    " 禁用默认 <leader>t
+let g:llm_translate_map_optimize = 0    " 禁用默认 <leader>o
+let g:llm_translate_map_bugfix   = 0    " 禁用默认 <leader>b
 ```
 
 ## Providers
