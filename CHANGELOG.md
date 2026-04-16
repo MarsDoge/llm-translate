@@ -7,6 +7,22 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **一键安装脚本 `install.sh`**（[#1](https://github.com/MarsDoge/llm-translate/issues/1)）：
+  - 两种模式：`--mode manual`（默认，clone 到 `~/.local/share/llm-translate` +
+    写入 vimrc 的 `runtimepath`）和 `--mode vim-plug`（自动 bootstrap vim-plug
+    + 写入 `Plug 'MarsDoge/llm-translate'` + 无头跑 `:PlugInstall`）。
+  - 已在本地 checkout 运行时自动复用当前目录，不再二次 clone。
+  - 幂等：重复执行只会补齐缺失的链接/配置，不会重复注入。
+  - 检测已有的 `plug#begin` 块时不会破坏用户配置，而是预先克隆仓库并提示
+    用户手动添加一行。
+  - 只有当 `~/.config/nvim/init.vim` 已存在时才触碰 Neovim 配置，避免误伤
+    init.lua 用户。
+  - `install.sh --uninstall` 可完整回滚脚本写入的标记块和符号链接。
+  - 其他参数：`--prefix`、`--dir`、`--skip-vim`。
+  - 安装完成后会跑一次 mymemory 冒烟测试验证链路。
+
 ## [0.1.0] — 2026-04-15
 
 首个公开版本。

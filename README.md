@@ -28,7 +28,26 @@ the current selection or buffer into a split window.
 (`sudo apt install jq curl`). If you have no sudo, drop the `jq` static binary
 into `~/.local/bin` from the [jq releases page](https://github.com/jqlang/jq/releases).
 
-Then pick **one** of the two tracks below.
+### One-liner (manual mode — recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash
+```
+
+Or, if you use [vim-plug](https://github.com/junegunn/vim-plug):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash -s -- --mode vim-plug
+```
+
+The installer clones the repo to `~/.local/share/llm-translate` (or
+`~/.vim/plugged/llm-translate` in vim-plug mode), symlinks `llm-translate`
+into `~/.local/bin`, adds it to `$PATH` if missing, and wires up your
+`~/.vimrc` (and `~/.config/nvim/init.vim` if present). It's idempotent, and
+`install.sh --uninstall` rolls everything back. See `install.sh --help`
+for `--prefix`, `--dir`, `--skip-vim`.
+
+### Or do it by hand — pick **one** of the two tracks below.
 
 ### Option A — Manual (one clone covers CLI + Vim)
 
