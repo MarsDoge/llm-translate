@@ -9,13 +9,64 @@
 配套的 Vim 插件可以对当前选区或整个 buffer 跑任意一个任务。
 
 ```text
-┌─────────────────┐     ┌──────────────────────────┐     ┌───────────────┐
-│ vim 可视选区    │ ──▶ │ llm-translate (CLI)      │ ──▶ │  provider API │
-│ 或整个 buffer   │     │ 任务: translate          │     │ (deepseek/…)  │
-│                 │     │       optimize           │     │               │
-│                 │     │       bugfix             │     │               │
-└─────────────────┘     └──────────────────────────┘     └───────────────┘
+┌─────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
+│ vim 可视选区    │ ──▶ │ llm-translate (CLI)      │ ──▶ │ provider 后端                     │
+│ 或整个 buffer   │     │ 任务: translate          │     │ openai_compat:                     │
+│                 │     │       optimize           │     │   aliyun-codingplan, doubao,      │
+│                 │     │       bugfix             │     │   grok, kimi, mistral, qwen,      │
+│                 │     │                          │     │   zhipu                            │
+│                 │     │                          │     │ 直连/本地: claude, deepseek,      │
+│                 │     │                          │     │   openai, ollama, mymemory        │
+└─────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
+
+下面这张 Mermaid 图会按当前仓库路径生成；改动结构后运行
+`./scripts/render-readme-diagrams.sh` 即可刷新：
+
+<!-- ARCHITECTURE_MERMAID:START -->
+```mermaid
+flowchart LR
+  Input["Vim 可视选区 / 整个 buffer"]
+  Plugin["plugin/llm-translate.vim\n命令与映射"]
+  Autoload["autoload/llm_translate.vim\n选区 / buffer 执行入口"]
+  CLI["bin/llm-translate\n任务分发\ntranslate | optimize | bugfix"]
+  Compat["lib/openai_compat.sh\n共享 chat-completions helper"]
+  Input --> Plugin --> Autoload --> CLI
+  subgraph _______provider_______["直连 provider 脚本"]
+    _______provider________claude["lib/providers/claude.sh"]
+    _______provider________deepseek["lib/providers/deepseek.sh"]
+    _______provider________openai["lib/providers/openai.sh"]
+  end
+  subgraph OpenAI________provider_______["OpenAI 兼容 provider 脚本"]
+    OpenAI________provider________aliyun_codingplan["lib/providers/aliyun-codingplan.sh"]
+    OpenAI________provider________doubao["lib/providers/doubao.sh"]
+    OpenAI________provider________grok["lib/providers/grok.sh"]
+    OpenAI________provider________kimi["lib/providers/kimi.sh"]
+    OpenAI________provider________mistral["lib/providers/mistral.sh"]
+    OpenAI________provider________qwen["lib/providers/qwen.sh"]
+    OpenAI________provider________zhipu["lib/providers/zhipu.sh"]
+  end
+  subgraph ____________["本地推理"]
+    _____________ollama["lib/providers/ollama.sh"]
+  end
+  subgraph _______API["翻译 API"]
+    _______API_mymemory["lib/providers/mymemory.sh"]
+  end
+  CLI --> Compat
+  CLI --> _______provider________claude
+  CLI --> _______provider________deepseek
+  CLI --> _______provider________openai
+  CLI --> _____________ollama
+  CLI --> _______API_mymemory
+  Compat --> OpenAI________provider________aliyun_codingplan
+  Compat --> OpenAI________provider________doubao
+  Compat --> OpenAI________provider________grok
+  Compat --> OpenAI________provider________kimi
+  Compat --> OpenAI________provider________mistral
+  Compat --> OpenAI________provider________qwen
+  Compat --> OpenAI________provider________zhipu
+```
+<!-- ARCHITECTURE_MERMAID:END -->
 
 ## 特性
 
