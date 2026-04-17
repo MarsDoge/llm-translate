@@ -161,7 +161,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 | --------------------- | ---------------------- | --------------------------------------------------------- |
 | `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory`  |
 | `-m`, `--model`       | provider 各自的默认值    | 如 `deepseek-chat`、`gpt-4o-mini`；mymemory 忽略          |
-| `-t`, `--target`      | `Simplified Chinese`   | 自然语言名（`"Japanese"`）或 ISO 码（`ja-JP`）             |
+| `-t`, `--target`      | `Simplified Chinese`   | 自然语言名（`"Chinese"`）或 ISO 码（`zh-CN`）              |
 | `-s`, `--source`      | `auto`                 | mymemory 且源语言不是英文时必须显式指定                    |
 | `--task`              | `translate`            | `translate` / `optimize` / `bugfix`（后两个仅 LLM）        |
 | `--temperature`       | `0.2`                  | 仅 LLM provider 使用                                      |
@@ -176,7 +176,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 
 ```bash
 # translate（默认任务）
-echo "Hello, world!" | llm-translate -t "Japanese"
+echo "Hello, world!" | llm-translate -t "Chinese"
 llm-translate -p openai -m gpt-4o-mini < README.md
 llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
 llm-translate -p aliyun-codingplan -m kimi-k2.5 -t English < notes.zh.md

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Mistral AI — https://docs.mistral.ai
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${MISTRAL_API_KEY:?MISTRAL_API_KEY is not set}"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # xAI Grok — https://docs.x.ai
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${XAI_API_KEY:?XAI_API_KEY is not set}"

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Alibaba Cloud Model Studio Coding Plan via OpenAI-compatible mode
 # https://help.aliyun.com/zh/model-studio/coding-plan
+# llm-translate-stream: yes
 set -euo pipefail
 
 ALIYUN_CODING_PLAN_KEY="${ALIYUN_CODING_PLAN_API_KEY:-${CODING_PLAN_API_KEY:-${BAILIAN_CODING_PLAN_API_KEY:-}}}"

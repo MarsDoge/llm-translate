@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Moonshot AI (Kimi) — https://platform.moonshot.cn
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${MOONSHOT_API_KEY:?MOONSHOT_API_KEY is not set}"

@@ -2,6 +2,7 @@
 # ByteDance Doubao (豆包) via Volcengine Ark — https://www.volcengine.com/docs/82379
 # NOTE: Ark uses endpoint IDs (e.g. "ep-20250101-xxxxx"), not model names.
 # Create an endpoint in the Volcengine console and pass it via -m or env.
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${ARK_API_KEY:?ARK_API_KEY is not set}"

@@ -329,7 +329,7 @@ Next step — export an API key for a real LLM provider:
   export OPENAI_API_KEY=sk-...         # https://platform.openai.com
   export ANTHROPIC_API_KEY=sk-ant-...  # https://console.anthropic.com
 
-Then:  echo "Hello" | llm-translate -p deepseek -t Japanese
+Then:  echo "Hello" | llm-translate -p deepseek -t Chinese
 
 EOF
 }
