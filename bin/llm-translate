@@ -15,6 +15,7 @@ SOURCE_LANG="${LLM_TRANSLATE_SOURCE:-auto}"
 TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
 TASK="${LLM_TRANSLATE_TASK:-translate}"
 STREAM="${LLM_TRANSLATE_STREAM:-0}"
+FORMAT="${LLM_TRANSLATE_FORMAT:-mermaid}"
 
 usage() {
   cat <<EOF
@@ -38,8 +39,11 @@ OPTIONS
                           handling, off-by-one, wrong operator, etc) and
                           patches with inline FIX: comments; mindmap reads a
                           symbol + its ctags/cscope dependencies from stdin
-                          and emits a Mermaid flowchart. All three require an
-                          LLM provider (not mymemory).
+                          and emits a graph. All three require an LLM
+                          provider (not mymemory).
+      --format FMT        mindmap only: mermaid (default) | dot
+                          Pick the diagram language; render with \`mmdc\`
+                          (Mermaid) or \`dot\` (GraphViz) respectively.
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --stream            Stream output tokens as they arrive (LLM providers
                           only; mymemory does not stream)
@@ -89,6 +93,7 @@ while [ $# -gt 0 ]; do
     --temperature)     TEMPERATURE="$2"; shift 2 ;;
     --stream)          STREAM=1; shift ;;
     --no-stream)       STREAM=0; shift ;;
+    --format)          FORMAT="$2"; shift 2 ;;
     --list-providers)  list_providers; exit 0 ;;
     -v|--version)      echo "$VERSION"; exit 0 ;;
     -h|--help)         usage; exit 0 ;;
@@ -201,7 +206,9 @@ Rules:
     case "$PROVIDER" in
       mymemory) die "--task mindmap requires an LLM provider (mymemory is translation-only)" ;;
     esac
-    SYSTEM_PROMPT="You are a software-architecture visualizer. The user will supply a block of structured context about ONE symbol (function, type, macro, or variable): its name, a definition line if known, and a list of ctags / cscope / grep hits describing where it is referenced and what it touches.
+    case "$FORMAT" in
+      mermaid)
+        SYSTEM_PROMPT="You are a software-architecture visualizer. The user will supply a block of structured context about ONE symbol (function, type, macro, or variable): its name, a definition line if known, and a list of ctags / cscope / grep hits describing where it is referenced and what it touches.
 
 Your job: emit a single Mermaid flowchart that puts the symbol at the centre, its callees / dependencies downstream, and its callers / usage sites upstream.
 
@@ -217,6 +224,29 @@ Rules:
       graph TD
           unknown[\"(no evidence)\"]
 - Do NOT invent relationships. If you only have a definition and no references, emit the centre node alone with a short 'defined in' label."
+        ;;
+      dot)
+        SYSTEM_PROMPT="You are a software-architecture visualizer. The user will supply a block of structured context about ONE symbol (function, type, macro, or variable): its name, a definition line if known, and a list of ctags / cscope / grep hits describing where it is referenced and what it touches.
+
+Your job: emit a single GraphViz DOT digraph that puts the symbol at the centre, its callees / dependencies downstream, and its callers / usage sites upstream.
+
+Rules:
+- Output ONLY the DOT source. No prose, no markdown fences, no preamble, no trailing explanation.
+- First line MUST start with 'digraph '. Use 'digraph G { rankdir=TB; node [shape=box,fontname=\"Helvetica\"];' as the header.
+- The target symbol is the centre node. Give it a stable id and style it distinctly, e.g. 'center [label=\"parse_args()\" style=filled fillcolor=\"#ffd\" penwidth=2];'.
+- One node per distinct caller and per distinct callee. Node ids must be valid DOT identifiers (alphanumeric + underscore); put human-friendly text in 'label=\"...\"'.
+- Edges: 'caller_id -> center;' for callers, 'center -> callee_id;' for callees. If the evidence shows a data/type dependency rather than a call, label it: 'center -> type_id [label=\"uses\"];'.
+- If multiple references come from the same file, group them with 'subgraph cluster_<sanitised_file> { label=\"filename.c\"; style=dashed; ... }'.
+- Cap the diagram at ~20 nodes. If more exist, add one node labelled '(N more callers)' / '(N more callees)' with an edge to/from the centre.
+- Close with a single '}' on its own line.
+- If the context is empty or contains no recognisable symbol, emit:
+      digraph G { unknown [label=\"(no evidence)\"]; }
+- Do NOT invent relationships. If you only have a definition and no references, emit the centre node alone with a short 'defined in' label."
+        ;;
+      *)
+        die "unknown --format: $FORMAT (want mermaid or dot)"
+        ;;
+    esac
     ;;
   *)
     die "unknown --task: $TASK (want translate, optimize, bugfix, or mindmap)"
@@ -260,6 +290,7 @@ export LLM_TRANSLATE_TARGET_CODE
 export LLM_TRANSLATE_SOURCE_CODE
 export LLM_TRANSLATE_TASK="$TASK"
 export LLM_TRANSLATE_STREAM="$STREAM"
+export LLM_TRANSLATE_FORMAT="$FORMAT"
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"

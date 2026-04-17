@@ -13,7 +13,9 @@
 "   let g:llm_translate_map_optimize = 1               " set 0 to disable default <leader>o
 "   let g:llm_translate_map_bugfix   = 1               " set 0 to disable default <leader>b
 "   let g:llm_translate_map_mindmap  = 1               " set 0 to disable default <leader>m
-"   let g:llm_translate_mindmap_render = 'text'        " 'text' (default) | 'png' (requires mmdc on $PATH)
+"   let g:llm_translate_mindmap_format = 'mermaid'     " 'mermaid' (default) | 'dot' (GraphViz)
+"   let g:llm_translate_mindmap_render = 'text'        " 'text' (default) | 'png'
+"                                                      "   mermaid → needs `mmdc`; dot → needs `dot`
 
 if exists('g:loaded_llm_translate')
   finish
@@ -31,6 +33,7 @@ let g:llm_translate_map      = get(g:, 'llm_translate_map', 1)
 let g:llm_translate_map_optimize = get(g:, 'llm_translate_map_optimize', 1)
 let g:llm_translate_map_bugfix   = get(g:, 'llm_translate_map_bugfix', 1)
 let g:llm_translate_map_mindmap  = get(g:, 'llm_translate_map_mindmap', 1)
+let g:llm_translate_mindmap_format = get(g:, 'llm_translate_mindmap_format', 'mermaid')
 let g:llm_translate_mindmap_render = get(g:, 'llm_translate_mindmap_render', 'text')
 
 command! -range LLMTranslate          call llm_translate#selection()

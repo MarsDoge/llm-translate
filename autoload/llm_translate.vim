@@ -176,31 +176,42 @@ function! s:GatherSymbolContext(sym) abort
   return join(l:lines, "\n")
 endfunction
 
-function! s:MindmapCmd() abort
+function! s:MindmapCmd(fmt) abort
   let l:parts = [shellescape(g:llm_translate_cmd),
         \ '-p', shellescape(g:llm_translate_provider),
-        \ '--task', shellescape('mindmap')]
+        \ '--task', shellescape('mindmap'),
+        \ '--format', shellescape(a:fmt)]
   if !empty(g:llm_translate_model)
     call extend(l:parts, ['-m', shellescape(g:llm_translate_model)])
   endif
   return join(l:parts, ' ')
 endfunction
 
-function! s:MaybeRenderPng(mermaid_path) abort
+function! s:MaybeRenderGraph(src_path, fmt) abort
   if g:llm_translate_mindmap_render !=# 'png'
     return
   endif
-  if !executable('mmdc')
+  if a:fmt ==# 'mermaid'
+    let l:tool = 'mmdc'
+    let l:png = substitute(a:src_path, '\.mmd$', '.png', '')
+    let l:cmd = 'mmdc -i ' . shellescape(a:src_path)
+          \ . ' -o ' . shellescape(l:png) . ' 2>&1'
+  else
+    let l:tool = 'dot'
+    let l:png = substitute(a:src_path, '\.dot$', '.png', '')
+    let l:cmd = 'dot -Tpng ' . shellescape(a:src_path)
+          \ . ' -o ' . shellescape(l:png) . ' 2>&1'
+  endif
+  if !executable(l:tool)
     echohl WarningMsg
-    echo 'llm-translate: g:llm_translate_mindmap_render=png but mmdc not found on $PATH'
+    echo 'llm-translate: g:llm_translate_mindmap_render=png but '
+          \ . l:tool . ' not found on $PATH'
     echohl None
     return
   endif
-  let l:png = substitute(a:mermaid_path, '\.mmd$', '.png', '')
-  let l:out = system('mmdc -i ' . shellescape(a:mermaid_path)
-        \ . ' -o ' . shellescape(l:png) . ' 2>&1')
+  let l:out = system(l:cmd)
   if v:shell_error != 0
-    echohl ErrorMsg | echo 'mmdc failed: ' . l:out | echohl None
+    echohl ErrorMsg | echo l:tool . ' failed: ' . l:out | echohl None
     return
   endif
   let l:opener = executable('xdg-open') ? 'xdg-open'
@@ -219,9 +230,18 @@ function! s:RunMindmap(sym) abort
     echohl WarningMsg | echo 'llm-translate: no symbol under cursor' | echohl None
     return
   endif
-  echo 'llm-translate: mindmap for ' . l:sym . ' via ' . g:llm_translate_provider . '…'
+  let l:fmt = g:llm_translate_mindmap_format
+  if l:fmt !=# 'mermaid' && l:fmt !=# 'dot'
+    echohl ErrorMsg
+    echo 'llm-translate: g:llm_translate_mindmap_format must be "mermaid" or "dot" (got '
+          \ . l:fmt . ')'
+    echohl None
+    return
+  endif
+  echo 'llm-translate: mindmap (' . l:fmt . ') for ' . l:sym
+        \ . ' via ' . g:llm_translate_provider . '…'
   let l:context = s:GatherSymbolContext(l:sym)
-  let l:result = system(s:MindmapCmd(), l:context)
+  let l:result = system(s:MindmapCmd(l:fmt), l:context)
   redraw | echo ''
   if v:shell_error != 0
     echohl ErrorMsg
@@ -231,13 +251,14 @@ function! s:RunMindmap(sym) abort
   endif
 
   let l:lines = split(l:result, "\n", 1)
-  let l:tmp = tempname() . '.mmd'
+  let l:ext = l:fmt ==# 'mermaid' ? '.mmd' : '.dot'
+  let l:tmp = tempname() . l:ext
   call writefile(l:lines, l:tmp)
 
   execute g:llm_translate_split . ' new'
-  call s:FillScratch(l:lines, '[mindmap:' . l:sym . ']', 'mermaid')
+  call s:FillScratch(l:lines, '[mindmap:' . l:fmt . ':' . l:sym . ']', l:fmt)
 
-  call s:MaybeRenderPng(l:tmp)
+  call s:MaybeRenderGraph(l:tmp, l:fmt)
 endfunction
 
 function! llm_translate#mindmap() abort
