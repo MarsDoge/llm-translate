@@ -32,11 +32,13 @@ OPTIONS
                           or ISO code ("zh-CN"). Non-LLM providers need ISO.
                           (default: "Simplified Chinese")
   -s, --source LANG       Source language hint (default: auto)
-      --task WHAT         translate (default) | optimize | bugfix
+      --task WHAT         translate (default) | optimize | bugfix | mindmap
                           optimize rewrites the input as cleaner code; bugfix
                           hunts for common programmer bugs (boundaries, null
                           handling, off-by-one, wrong operator, etc) and
-                          patches with inline FIX: comments. Both require an
+                          patches with inline FIX: comments; mindmap reads a
+                          symbol + its ctags/cscope dependencies from stdin
+                          and emits a Mermaid flowchart. All three require an
                           LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
       --stream            Stream output tokens as they arrive (LLM providers
@@ -65,6 +67,7 @@ EXAMPLES
   echo "Hello" | llm-translate -p mymemory -t zh-CN     # no API key needed
   llm-translate --task optimize < messy.py              # rewrite as cleaner Python
   llm-translate --task bugfix   < buggy.go              # fix logic bugs, mark with FIX:
+  llm-translate --task mindmap  < ctags-dump.txt        # Mermaid graph of a symbol's deps
 EOF
 }
 
@@ -194,8 +197,29 @@ Rules:
 - Never add TODO, NOTE, explanatory, or stylistic comments beyond the FIX: markers.
 - If you see no bugs, return the input UNCHANGED."
     ;;
+  mindmap)
+    case "$PROVIDER" in
+      mymemory) die "--task mindmap requires an LLM provider (mymemory is translation-only)" ;;
+    esac
+    SYSTEM_PROMPT="You are a software-architecture visualizer. The user will supply a block of structured context about ONE symbol (function, type, macro, or variable): its name, a definition line if known, and a list of ctags / cscope / grep hits describing where it is referenced and what it touches.
+
+Your job: emit a single Mermaid flowchart that puts the symbol at the centre, its callees / dependencies downstream, and its callers / usage sites upstream.
+
+Rules:
+- Output ONLY the Mermaid source. No prose, no markdown fences, no preamble, no trailing explanation.
+- First line MUST be 'graph TD' (or 'graph LR' if you judge a horizontal layout reads better).
+- The target symbol is the centre node. Give it a stable id and a bracketed label, e.g. 'center[\"parse_args()\"]'. Make it visually distinct with 'style center fill:#ffd,stroke:#a80,stroke-width:2px'.
+- One node per distinct caller and per distinct callee. Use identifiers that are valid Mermaid ids (alphanumeric, underscore); keep display labels human-friendly in brackets.
+- Edges: 'caller_id --> center' for callers, 'center --> callee_id' for callees. If the evidence shows a data/type dependency rather than a call, label the edge: 'center -->|uses| type_id'.
+- If multiple references come from the same file, group them with 'subgraph filename.c ... end'.
+- Cap the diagram at ~20 nodes. If more exist, add one node labelled '(N more callers)' or '(N more callees)' with an edge to/from the centre.
+- If the context is empty or contains no recognisable symbol, emit:
+      graph TD
+          unknown[\"(no evidence)\"]
+- Do NOT invent relationships. If you only have a definition and no references, emit the centre node alone with a short 'defined in' label."
+    ;;
   *)
-    die "unknown --task: $TASK (want translate, optimize, or bugfix)"
+    die "unknown --task: $TASK (want translate, optimize, bugfix, or mindmap)"
     ;;
 esac
 

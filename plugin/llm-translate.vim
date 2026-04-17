@@ -12,6 +12,8 @@
 "   let g:llm_translate_map      = 1                   " set 0 to disable default <leader>t
 "   let g:llm_translate_map_optimize = 1               " set 0 to disable default <leader>o
 "   let g:llm_translate_map_bugfix   = 1               " set 0 to disable default <leader>b
+"   let g:llm_translate_map_mindmap  = 1               " set 0 to disable default <leader>m
+"   let g:llm_translate_mindmap_render = 'text'        " 'text' (default) | 'png' (requires mmdc on $PATH)
 
 if exists('g:loaded_llm_translate')
   finish
@@ -28,6 +30,8 @@ let g:llm_translate_filetype = get(g:, 'llm_translate_filetype', 'markdown')
 let g:llm_translate_map      = get(g:, 'llm_translate_map', 1)
 let g:llm_translate_map_optimize = get(g:, 'llm_translate_map_optimize', 1)
 let g:llm_translate_map_bugfix   = get(g:, 'llm_translate_map_bugfix', 1)
+let g:llm_translate_map_mindmap  = get(g:, 'llm_translate_map_mindmap', 1)
+let g:llm_translate_mindmap_render = get(g:, 'llm_translate_mindmap_render', 'text')
 
 command! -range LLMTranslate          call llm_translate#selection()
 command!        LLMTranslateBuffer    call llm_translate#buffer()
@@ -35,6 +39,8 @@ command! -range LLMOptimize           call llm_translate#optimize()
 command!        LLMOptimizeBuffer     call llm_translate#optimize_buffer()
 command! -range LLMBugfix             call llm_translate#bugfix()
 command!        LLMBugfixBuffer       call llm_translate#bugfix_buffer()
+command!        LLMMindmap            call llm_translate#mindmap()
+command! -range LLMMindmapSelection   call llm_translate#mindmap_selection()
 
 if g:llm_translate_map
   if !hasmapto('<Plug>LLMTranslate', 'x')
@@ -51,5 +57,14 @@ endif
 if g:llm_translate_map_bugfix
   if !hasmapto('<Plug>LLMBugfix', 'x')
     xnoremap <silent> <leader>b :<C-u>call llm_translate#bugfix()<CR>
+  endif
+endif
+
+if g:llm_translate_map_mindmap
+  if !hasmapto('<Plug>LLMMindmap', 'n')
+    nnoremap <silent> <leader>m :<C-u>call llm_translate#mindmap()<CR>
+  endif
+  if !hasmapto('<Plug>LLMMindmapSelection', 'x')
+    xnoremap <silent> <leader>m :<C-u>call llm_translate#mindmap_selection()<CR>
   endif
 endif

@@ -111,3 +111,139 @@ endfunction
 function! llm_translate#bugfix_buffer() abort
   call s:RunCodeTask('bugfix', join(getline(1, '$'), "\n"), &filetype)
 endfunction
+
+" --- mindmap task ---------------------------------------------------------
+" Gather ctags / cscope / grep context for a symbol and ask the LLM to emit
+" a Mermaid flowchart of its callers and callees. The scratch buffer holds
+" the raw Mermaid source. If g:llm_translate_mindmap_render is 'png' and
+" `mmdc` is on $PATH, render to a temp PNG and open it with xdg-open.
+
+function! s:GatherSymbolContext(sym) abort
+  let l:lines = ['SYMBOL: ' . a:sym, '']
+
+  " 1. Definitions via Vim's own tag database (populated by ctags).
+  try
+    let l:tags = taglist('^' . a:sym . '$')
+  catch
+    let l:tags = []
+  endtry
+  if !empty(l:tags)
+    call add(l:lines, 'DEFINITIONS (ctags):')
+    for l:t in l:tags[:9]
+      let l:kind = get(l:t, 'kind', '?')
+      let l:file = get(l:t, 'filename', '?')
+      let l:cmd  = substitute(get(l:t, 'cmd', ''), '^/\^\?\|\$\?/$', '', 'g')
+      call add(l:lines, printf('  %s  %s  %s  %s', l:kind, l:file, a:sym, l:cmd))
+    endfor
+    call add(l:lines, '')
+  endif
+
+  " 2. cscope callers/callees, if a cscope.out is reachable.
+  if has('cscope') && filereadable(findfile('cscope.out', '.;'))
+    let l:callers = systemlist('cscope -dL -3 ' . shellescape(a:sym) . ' 2>/dev/null')
+    if !empty(l:callers)
+      call add(l:lines, 'CALLERS (cscope):')
+      for l:c in l:callers[:14]
+        call add(l:lines, '  ' . l:c)
+      endfor
+      call add(l:lines, '')
+    endif
+    let l:callees = systemlist('cscope -dL -2 ' . shellescape(a:sym) . ' 2>/dev/null')
+    if !empty(l:callees)
+      call add(l:lines, 'CALLEES (cscope):')
+      for l:c in l:callees[:14]
+        call add(l:lines, '  ' . l:c)
+      endfor
+      call add(l:lines, '')
+    endif
+  endif
+
+  " 3. Fallback: coarse reference list via grep. Bounded so the prompt
+  "    doesn't explode on common identifiers.
+  if executable('grep')
+    let l:grep = 'grep -rn --binary-files=without-match'
+          \ . " --exclude-dir=.git --exclude-dir=node_modules"
+          \ . ' -w ' . shellescape(a:sym) . ' . 2>/dev/null | head -30'
+    let l:refs = systemlist(l:grep)
+    if !empty(l:refs)
+      call add(l:lines, 'REFERENCES (grep -w):')
+      for l:r in l:refs
+        call add(l:lines, '  ' . l:r)
+      endfor
+    endif
+  endif
+
+  return join(l:lines, "\n")
+endfunction
+
+function! s:MindmapCmd() abort
+  let l:parts = [shellescape(g:llm_translate_cmd),
+        \ '-p', shellescape(g:llm_translate_provider),
+        \ '--task', shellescape('mindmap')]
+  if !empty(g:llm_translate_model)
+    call extend(l:parts, ['-m', shellescape(g:llm_translate_model)])
+  endif
+  return join(l:parts, ' ')
+endfunction
+
+function! s:MaybeRenderPng(mermaid_path) abort
+  if g:llm_translate_mindmap_render !=# 'png'
+    return
+  endif
+  if !executable('mmdc')
+    echohl WarningMsg
+    echo 'llm-translate: g:llm_translate_mindmap_render=png but mmdc not found on $PATH'
+    echohl None
+    return
+  endif
+  let l:png = substitute(a:mermaid_path, '\.mmd$', '.png', '')
+  let l:out = system('mmdc -i ' . shellescape(a:mermaid_path)
+        \ . ' -o ' . shellescape(l:png) . ' 2>&1')
+  if v:shell_error != 0
+    echohl ErrorMsg | echo 'mmdc failed: ' . l:out | echohl None
+    return
+  endif
+  let l:opener = executable('xdg-open') ? 'xdg-open'
+        \ : (executable('open') ? 'open' : '')
+  if empty(l:opener)
+    echo 'llm-translate: rendered ' . l:png . ' (no opener on $PATH; open it manually)'
+    return
+  endif
+  call system(l:opener . ' ' . shellescape(l:png) . ' >/dev/null 2>&1 &')
+  echo 'llm-translate: opened ' . l:png
+endfunction
+
+function! s:RunMindmap(sym) abort
+  let l:sym = trim(a:sym)
+  if empty(l:sym)
+    echohl WarningMsg | echo 'llm-translate: no symbol under cursor' | echohl None
+    return
+  endif
+  echo 'llm-translate: mindmap for ' . l:sym . ' via ' . g:llm_translate_provider . '…'
+  let l:context = s:GatherSymbolContext(l:sym)
+  let l:result = system(s:MindmapCmd(), l:context)
+  redraw | echo ''
+  if v:shell_error != 0
+    echohl ErrorMsg
+    echo 'llm-translate mindmap failed (' . v:shell_error . '): ' . l:result
+    echohl None
+    return
+  endif
+
+  let l:lines = split(l:result, "\n", 1)
+  let l:tmp = tempname() . '.mmd'
+  call writefile(l:lines, l:tmp)
+
+  execute g:llm_translate_split . ' new'
+  call s:FillScratch(l:lines, '[mindmap:' . l:sym . ']', 'mermaid')
+
+  call s:MaybeRenderPng(l:tmp)
+endfunction
+
+function! llm_translate#mindmap() abort
+  call s:RunMindmap(expand('<cword>'))
+endfunction
+
+function! llm_translate#mindmap_selection() range abort
+  call s:RunMindmap(s:CaptureSelection())
+endfunction
