@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Alibaba Tongyi Qianwen (Qwen) via DashScope OpenAI-compatible mode
 # https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${DASHSCOPE_API_KEY:?DASHSCOPE_API_KEY is not set}"

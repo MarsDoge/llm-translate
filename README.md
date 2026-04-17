@@ -205,7 +205,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 | --------------------- | ---------------------- | -------------------------------------------------------- |
 | `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory` |
 | `-m`, `--model`       | provider-specific      | e.g. `deepseek-chat`, `gpt-4o-mini`; unused for mymemory |
-| `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Japanese"`) or ISO code (`ja-JP`)        |
+| `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Chinese"`) or ISO code (`zh-CN`)         |
 | `-s`, `--source`      | `auto`                 | required for mymemory when source is not English         |
 | `--task`              | `translate`            | `translate` / `optimize` / `bugfix` — LLM-only for the last two |
 | `--temperature`       | `0.2`                  | LLM providers only                                       |
@@ -220,7 +220,7 @@ Override defaults via env vars: `LLM_TRANSLATE_PROVIDER`, `LLM_TRANSLATE_MODEL`,
 
 ```bash
 # translate (default task)
-echo "Hello, world!" | llm-translate -t "Japanese"
+echo "Hello, world!" | llm-translate -t "Chinese"
 llm-translate -p openai -m gpt-4o-mini < README.md
 llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
 llm-translate -p aliyun-codingplan -m kimi-k2.5 -t English < notes.zh.md

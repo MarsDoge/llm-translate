@@ -14,6 +14,7 @@ TARGET="${LLM_TRANSLATE_TARGET:-Simplified Chinese}"
 SOURCE_LANG="${LLM_TRANSLATE_SOURCE:-auto}"
 TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
 TASK="${LLM_TRANSLATE_TASK:-translate}"
+STREAM="${LLM_TRANSLATE_STREAM:-0}"
 
 usage() {
   cat <<EOF
@@ -27,8 +28,8 @@ OPTIONS
   -p, --provider NAME     Provider: deepseek | openai | claude | ollama | aliyun-codingplan | mymemory
                           (default: \$LLM_TRANSLATE_PROVIDER or deepseek)
   -m, --model NAME        Model name (provider-specific default; unused for mymemory)
-  -t, --target LANG       Target language. Accepts natural name ("Japanese")
-                          or ISO code ("ja-JP"). Non-LLM providers need ISO.
+  -t, --target LANG       Target language. Accepts natural name ("Chinese")
+                          or ISO code ("zh-CN"). Non-LLM providers need ISO.
                           (default: "Simplified Chinese")
   -s, --source LANG       Source language hint (default: auto)
       --task WHAT         translate (default) | optimize | bugfix
@@ -38,6 +39,8 @@ OPTIONS
                           patches with inline FIX: comments. Both require an
                           LLM provider (not mymemory).
       --temperature N     Sampling temperature, LLM providers only (default: 0.2)
+      --stream            Stream output tokens as they arrive (LLM providers
+                          only; mymemory does not stream)
       --list-providers    List supported providers and exit
   -v, --version           Print version
   -h, --help              Show this help
@@ -55,7 +58,7 @@ ENVIRONMENT
   MYMEMORY_EMAIL          Optional email for mymemory; raises daily quota
 
 EXAMPLES
-  echo "Hello, world!" | llm-translate -t "Japanese"
+  echo "Hello, world!" | llm-translate -t "Chinese"
   llm-translate -p openai -m gpt-4o-mini < README.md
   llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
   llm-translate -p ollama -m qwen2.5:7b -t English < notes.txt
@@ -81,6 +84,8 @@ while [ $# -gt 0 ]; do
     -s|--source)       SOURCE_LANG="$2"; shift 2 ;;
     --task)            TASK="$2"; shift 2 ;;
     --temperature)     TEMPERATURE="$2"; shift 2 ;;
+    --stream)          STREAM=1; shift ;;
+    --no-stream)       STREAM=0; shift ;;
     --list-providers)  list_providers; exit 0 ;;
     -v|--version)      echo "$VERSION"; exit 0 ;;
     -h|--help)         usage; exit 0 ;;
@@ -96,6 +101,14 @@ command -v curl >/dev/null 2>&1 || die "curl is required"
 
 PROVIDER_SCRIPT="$LIB_DIR/providers/$PROVIDER.sh"
 [ -f "$PROVIDER_SCRIPT" ] || die "unknown provider: $PROVIDER (see --list-providers)"
+
+# Streaming is opt-in per provider. A provider declares support with a
+# header comment: "# llm-translate-stream: yes". Absent or "no" → reject.
+if [ "$STREAM" = "1" ]; then
+  if ! grep -qE '^# llm-translate-stream:[[:space:]]*yes[[:space:]]*$' "$PROVIDER_SCRIPT"; then
+    die "--stream is not supported by provider '$PROVIDER'"
+  fi
+fi
 
 # --- read input ------------------------------------------------------------
 if [ -t 0 ]; then
@@ -222,6 +235,7 @@ export LLM_TRANSLATE_TEMPERATURE="$TEMPERATURE"
 export LLM_TRANSLATE_TARGET_CODE
 export LLM_TRANSLATE_SOURCE_CODE
 export LLM_TRANSLATE_TASK="$TASK"
+export LLM_TRANSLATE_STREAM="$STREAM"
 
 # --- dispatch --------------------------------------------------------------
 exec bash "$PROVIDER_SCRIPT"

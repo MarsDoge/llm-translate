@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # DeepSeek provider — https://platform.deepseek.com
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY is not set}"
@@ -10,12 +11,14 @@ MODEL="${LLM_TRANSLATE_MODEL:-deepseek-chat}"
 [ -n "$MODEL" ] || MODEL="deepseek-chat"
 ENDPOINT="${DEEPSEEK_API_BASE:-https://api.deepseek.com}/chat/completions"
 TEMPERATURE="${LLM_TRANSLATE_TEMPERATURE:-0.2}"
+STREAM="${LLM_TRANSLATE_STREAM:-0}"
 
 payload="$(jq -n \
   --arg model  "$MODEL" \
   --arg system "$LLM_TRANSLATE_SYSTEM" \
   --arg user   "$LLM_TRANSLATE_INPUT" \
   --argjson temp "$TEMPERATURE" \
+  --argjson stream "$([ "$STREAM" = "1" ] && echo true || echo false)" \
   '{
     model: $model,
     messages: [
@@ -23,8 +26,21 @@ payload="$(jq -n \
       {role: "user",   content: $user}
     ],
     temperature: $temp,
-    stream: false
+    stream: $stream
   }')"
+
+if [ "$STREAM" = "1" ]; then
+  # shellcheck source=../stream.sh
+  . "$(dirname "$(readlink -f "$0")")/../stream.sh"
+  set -o pipefail
+  curl -sS -N "$ENDPOINT" \
+    -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Accept: text/event-stream" \
+    -d "$payload" \
+    | llm_translate_stream_openai_sse "deepseek"
+  exit $?
+fi
 
 body_file="$(mktemp)"
 trap 'rm -f "$body_file"' EXIT

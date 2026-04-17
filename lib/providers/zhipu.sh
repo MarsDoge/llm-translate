@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Zhipu AI (智谱 GLM) — https://open.bigmodel.cn
+# llm-translate-stream: yes
 set -euo pipefail
 
 : "${ZHIPUAI_API_KEY:?ZHIPUAI_API_KEY is not set}"

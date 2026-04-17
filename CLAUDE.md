@@ -48,7 +48,7 @@ bash -n lib/providers/*.sh
 shellcheck bin/llm-translate lib/providers/*.sh
 
 # End-to-end smoke test (requires the corresponding API key env var)
-echo "Hello, world." | ./bin/llm-translate -p deepseek -t "Japanese"
+echo "Hello, world." | ./bin/llm-translate -p deepseek -t "Chinese"
 ./bin/llm-translate --task optimize -p deepseek < messy.py
 ./bin/llm-translate --task bugfix   -p deepseek < buggy.go
 ./bin/llm-translate --list-providers   # discovers lib/providers/*.sh
