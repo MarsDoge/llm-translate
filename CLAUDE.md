@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-`llm-translate` is a **stdin → CLI dispatcher → provider backend → stdout** pipeline, plus a thin Vim plugin that shells out to the CLI. The dispatcher picks a **task** (`translate`, `optimize`, or `bugfix`) which decides only the system prompt; all downstream machinery is task-agnostic.
+`llm-translate` is a **stdin → CLI dispatcher → provider backend → stdout** pipeline, plus a thin Vim plugin that shells out to the CLI. The dispatcher picks a **task** (`translate`, `optimize`, `bugfix`, or `mindmap`) which decides only the system prompt; all downstream machinery is task-agnostic.
 
 ```
 stdin ─▶ bin/llm-translate ─▶ lib/providers/<name>.sh ─▶ API ─▶ stdout
                 │
                 ├─ --task → picks one of the inline system prompts
-                │           (translate | optimize | bugfix)
+                │           (translate | optimize | bugfix | mindmap)
                 └─ exports LLM_TRANSLATE_INPUT, LLM_TRANSLATE_SYSTEM,
                          LLM_TRANSLATE_MODEL, LLM_TRANSLATE_TEMPERATURE,
                          LLM_TRANSLATE_TASK, then execs the provider script
@@ -24,8 +24,8 @@ Three boundaries to respect:
    - `LLM_TRANSLATE_INPUT` — raw user text (always set)
    - `LLM_TRANSLATE_SYSTEM` — pre-built system prompt (LLM providers)
    - `LLM_TRANSLATE_MODEL` / `LLM_TRANSLATE_TEMPERATURE` — LLM tuning
-   - `LLM_TRANSLATE_TASK` — one of `translate` / `optimize` / `bugfix` (informational; providers currently ignore it)
-   - `LLM_TRANSLATE_TARGET_CODE` / `LLM_TRANSLATE_SOURCE_CODE` — BCP 47-ish codes for non-LLM MT APIs (e.g. `zh-CN`, `ja-JP`). The dispatcher's `normalize_lang_code()` maps natural names ("Simplified Chinese") to these codes; unknowns pass through unchanged so users can always give a raw ISO code. When adding a new MT-API provider, extend `normalize_lang_code()` only if the provider's code scheme matches mymemory's (BCP 47); providers with their own scheme (baidu uses `zh` not `zh-CN`, `jp` not `ja-JP`) should map internally. Non-LLM providers must reject `optimize` / `bugfix` — the dispatcher already guards mymemory.
+   - `LLM_TRANSLATE_TASK` — one of `translate` / `optimize` / `bugfix` / `mindmap` (informational; providers currently ignore it)
+   - `LLM_TRANSLATE_TARGET_CODE` / `LLM_TRANSLATE_SOURCE_CODE` — BCP 47-ish codes for non-LLM MT APIs (e.g. `zh-CN`, `ja-JP`). The dispatcher's `normalize_lang_code()` maps natural names ("Simplified Chinese") to these codes; unknowns pass through unchanged so users can always give a raw ISO code. When adding a new MT-API provider, extend `normalize_lang_code()` only if the provider's code scheme matches mymemory's (BCP 47); providers with their own scheme (baidu uses `zh` not `zh-CN`, `jp` not `ja-JP`) should map internally. Non-LLM providers must reject `optimize` / `bugfix` / `mindmap` — the dispatcher already guards mymemory.
 
 2. **Vim plugin split** (`plugin/` vs `autoload/`): `plugin/llm-translate.vim` runs at Vim startup and only sets config defaults, `:command` definitions, and the default `<leader>t` mapping. The real implementation (`llm_translate#selection`, `llm_translate#buffer`, private helpers) lives in `autoload/llm_translate.vim` and loads lazily on first invocation. **Do not define `funcname#with#hashes` in `plugin/`** — Vim enforces that autoload-named functions live in `autoload/<prefix>.vim` and throws `E746` otherwise (fixed in 657b73f; easy to re-break).
 
@@ -51,15 +51,16 @@ shellcheck bin/llm-translate lib/providers/*.sh
 echo "Hello, world." | ./bin/llm-translate -p deepseek -t "Chinese"
 ./bin/llm-translate --task optimize -p deepseek < messy.py
 ./bin/llm-translate --task bugfix   -p deepseek < buggy.go
+./bin/llm-translate --task mindmap  -p deepseek < ctags-dump.txt
 ./bin/llm-translate --list-providers   # discovers lib/providers/*.sh
 
 # Vim plugin verification (no live API — checks all autoload entrypoints)
 vim -N -u NONE -i NONE --cmd 'set runtimepath+=.' \
     --cmd 'runtime! plugin/llm-translate.vim' \
     --cmd 'runtime! autoload/llm_translate.vim' \
-    -c 'echo exists("*llm_translate#selection") exists("*llm_translate#optimize") exists("*llm_translate#bugfix")' \
+    -c 'echo exists("*llm_translate#selection") exists("*llm_translate#optimize") exists("*llm_translate#bugfix") exists("*llm_translate#mindmap")' \
     -c 'qa!'
-# Expect: 1 1 1
+# Expect: 1 1 1 1
 ```
 
 ## Adding a new task
@@ -69,6 +70,7 @@ A task is just another branch in the `case "$TASK" in ... esac` block in `bin/ll
 1. Update the `--help` blurb and the top-of-file comment if the task needs flags other than the existing ones.
 2. If the task doesn't make sense for a non-LLM provider, reject the combination inside the task's branch (see the `mymemory` guards on `optimize` / `bugfix` for the pattern).
 3. For tasks that produce code (like `optimize` / `bugfix`), the Vim plugin should surface them through `s:RunCodeTask()` in `autoload/llm_translate.vim`, which opens a two-pane diff in a fresh tab. Add `llm_translate#<task>` and `llm_translate#<task>_buffer` autoload functions, then a `:LLM<Task>` command and optional `<leader>X` mapping in `plugin/llm-translate.vim` (gated by `g:llm_translate_map_<task>`).
+4. Tasks that operate on a *symbol* rather than a whole snippet (like `mindmap`) should gather their context inside the Vim plugin — e.g. `s:GatherSymbolContext()` queries `taglist()`, `cscope`, and `grep` — and pipe that structured blob into the CLI via stdin. The CLI's task branch just adds the system prompt.
 
 Prompts for code tasks should enforce: code-only output (no markdown fences), language detection, preservation of indentation and public APIs, and a strong bias toward returning the input unchanged. Over-eager rewriting is the default failure mode.
 
