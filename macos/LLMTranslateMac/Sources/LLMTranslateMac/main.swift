@@ -4,15 +4,22 @@ import Carbon
 import Foundation
 
 private enum AppFailure: Error, CustomStringConvertible {
-  case accessibilityRequired
+  case accessibilityRequired(String)
   case noSelectedText
   case cliNotFound
   case commandFailed(String)
 
   var description: String {
     switch self {
-    case .accessibilityRequired:
-      return "需要在 System Settings > Privacy & Security > Accessibility 中允许本应用控制电脑。"
+    case .accessibilityRequired(let appPath):
+      return """
+      需要在 System Settings > Privacy & Security > Accessibility 中允许本应用控制电脑。
+
+      当前运行路径:
+      \(appPath)
+
+      如果你已经打开过权限，请先删除旧的 LLMTranslateMac 条目，再把这份 .app 重新加进去。
+      """
     case .noSelectedText:
       return "没有读到选中文本。请先选中文字，再触发翻译或发音。"
     case .cliNotFound:
@@ -60,7 +67,7 @@ private final class SelectedTextReader {
   func readSelectedText() throws -> String {
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
     guard AXIsProcessTrustedWithOptions(options) else {
-      throw AppFailure.accessibilityRequired
+      throw AppFailure.accessibilityRequired(Bundle.main.bundlePath)
     }
 
     let pasteboard = NSPasteboard.general
