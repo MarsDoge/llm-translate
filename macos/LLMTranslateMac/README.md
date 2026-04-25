@@ -1,5 +1,7 @@
 # LLMTranslateMac
 
+[简体中文](./README.zh-CN.md) · English
+
 macOS menu-bar MVP for translating or speaking selected text from any app.
 
 It reuses the repository CLI (`bin/llm-translate`) instead of duplicating provider logic:
