@@ -131,6 +131,29 @@ private final class Translator {
     }
   }
 
+  var diagnostics: String {
+    var environment = ProcessInfo.processInfo.environment
+    loadConfigFile(into: &environment)
+    ensureHomebrewPath(in: &environment)
+    applyDefaults(to: &environment)
+
+    let provider = environment["LLM_TRANSLATE_PROVIDER"] ?? "(unset)"
+    let model = environment["LLM_TRANSLATE_MODEL"] ?? "(provider default)"
+    let target = environment["LLM_TRANSLATE_TARGET"] ?? "(unset)"
+    let configPath = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".config/llm-translate/env").path
+    let configExists = FileManager.default.fileExists(atPath: configPath) ? "yes" : "no"
+
+    return """
+    CLI: \(cliPath)
+    Provider: \(provider)
+    Model: \(model)
+    Target: \(target)
+    Config: \(configPath) exists: \(configExists)
+    PATH: \(environment["PATH"] ?? "")
+    """
+  }
+
   private func runTranslation(_ text: String) throws -> String {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -139,12 +162,7 @@ private final class Translator {
     var environment = ProcessInfo.processInfo.environment
     loadConfigFile(into: &environment)
     ensureHomebrewPath(in: &environment)
-    if environment["LLM_TRANSLATE_PROVIDER"] == nil && environment["DEEPSEEK_API_KEY"] == nil {
-      environment["LLM_TRANSLATE_PROVIDER"] = "mymemory"
-    }
-    if environment["LLM_TRANSLATE_TARGET"] == nil {
-      environment["LLM_TRANSLATE_TARGET"] = "Simplified Chinese"
-    }
+    applyDefaults(to: &environment)
     process.environment = environment
 
     let input = Pipe()
@@ -168,7 +186,26 @@ private final class Translator {
     }
 
     let stderr = String(data: errorData, encoding: .utf8) ?? ""
-    throw AppFailure.commandFailed(stderr.isEmpty ? stdout : stderr)
+    throw AppFailure.commandFailed("""
+    CLI failed with exit code \(process.terminationStatus).
+
+    \(diagnostics)
+
+    stderr:
+    \(stderr.isEmpty ? "(empty)" : stderr)
+
+    stdout:
+    \(stdout.isEmpty ? "(empty)" : stdout)
+    """)
+  }
+
+  private func applyDefaults(to environment: inout [String: String]) {
+    if environment["LLM_TRANSLATE_PROVIDER"] == nil {
+      environment["LLM_TRANSLATE_PROVIDER"] = "mymemory"
+    }
+    if environment["LLM_TRANSLATE_TARGET"] == nil {
+      environment["LLM_TRANSLATE_TARGET"] = "Simplified Chinese"
+    }
   }
 
   private func loadConfigFile(into environment: inout [String: String]) {
@@ -358,6 +395,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     addMenuItem(to: menu, title: "Translate Selection", action: #selector(translateSelection))
     addMenuItem(to: menu, title: "Speak Selection", action: #selector(speakSelection))
     addMenuItem(to: menu, title: "Test Translation", action: #selector(testTranslation))
+    addMenuItem(to: menu, title: "Show Diagnostics", action: #selector(showDiagnostics))
     menu.addItem(NSMenuItem.separator())
     let shortcutItem = NSMenuItem(title: "Shortcuts: ⌥⌘T translate, ⌥⌘S speak", action: nil, keyEquivalent: "")
     shortcutItem.isEnabled = false
@@ -405,6 +443,10 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         self?.showPanel(title: "Translation Test Failed", body: describe(error))
       }
     }
+  }
+
+  @objc private func showDiagnostics() {
+    showPanel(title: "Diagnostics", body: translator.diagnostics)
   }
 
   @objc private func translateSelection() {
