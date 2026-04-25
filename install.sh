@@ -82,10 +82,29 @@ check_deps() {
   fi
 }
 
+resolve_script_path() {
+  local target="$1" dir link
+  case "$target" in
+    /*) ;;
+    *) target="$PWD/$target" ;;
+  esac
+  while [[ -L "$target" ]]; do
+    dir="$(cd -P "$(dirname "$target")" >/dev/null 2>&1 && pwd)" || return 1
+    link="$(readlink "$target")"
+    case "$link" in
+      /*) target="$link" ;;
+      *) target="$dir/$link" ;;
+    esac
+  done
+  dir="$(cd -P "$(dirname "$target")" >/dev/null 2>&1 && pwd)" || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$target")"
+}
+
 # If we're running from inside a checkout, reuse it instead of cloning.
 detect_local_checkout() {
-  local self_dir
-  self_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+  local self_dir script_path
+  script_path="$(resolve_script_path "${BASH_SOURCE[0]}")" || return 0
+  self_dir="$(cd "$(dirname "$script_path")" && pwd)"
   if [[ -x "$self_dir/bin/llm-translate" && -d "$self_dir/lib/providers" ]]; then
     printf '%s' "$self_dir"
   fi

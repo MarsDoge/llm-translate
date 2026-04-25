@@ -11,7 +11,9 @@
 # shellcheck shell=bash
 
 # shellcheck source=stream.sh
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stream.sh"
+OPENAI_COMPAT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1091
+. "$OPENAI_COMPAT_DIR/stream.sh"
 
 llm_translate_openai_compat() {
   local endpoint="$1"
