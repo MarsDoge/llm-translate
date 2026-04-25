@@ -4,8 +4,29 @@ set -euo pipefail
 ROOT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 APP_NAME="LLMTranslateMac"
 APP_DIR="$ROOT_DIR/dist/$APP_NAME.app"
+INSTALL_DIR="/Applications/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+INSTALL=0
+
+usage() {
+  cat <<EOF
+usage: $0 [--install]
+
+Builds dist/$APP_NAME.app.
+
+Options:
+  --install   Also replace $INSTALL_DIR with the signed app bundle.
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --install) INSTALL=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $1" >&2; usage >&2; exit 1 ;;
+  esac
+done
 
 swift build -c release --package-path "$ROOT_DIR"
 
@@ -42,3 +63,10 @@ PLIST
 codesign --force --deep --sign - "$APP_DIR"
 
 echo "Built $APP_DIR"
+
+if [ "$INSTALL" -eq 1 ]; then
+  pkill -x "$APP_NAME" 2>/dev/null || true
+  rm -rf "$INSTALL_DIR"
+  cp -R "$APP_DIR" "$INSTALL_DIR"
+  echo "Installed $INSTALL_DIR"
+fi
