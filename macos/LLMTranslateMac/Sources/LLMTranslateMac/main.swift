@@ -389,6 +389,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem?
   private var panel: NSPanel?
   private var textView: NSTextView?
+  private let panelFont = NSFont.systemFont(ofSize: 14)
 
   override init() {
     do {
@@ -529,9 +530,19 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     let panel = panel ?? makePanel()
     panel.title = title
     let displayBody = body.isEmpty ? "(empty result)" : body
-    textView?.string = displayBody
-    textView?.setSelectedRange(NSRange(location: 0, length: 0))
-    textView?.scrollRangeToVisible(NSRange(location: 0, length: 0))
+    if let textView {
+      textView.textStorage?.setAttributedString(NSAttributedString(
+        string: displayBody,
+        attributes: [
+          .font: panelFont,
+          .foregroundColor: NSColor.labelColor
+        ]
+      ))
+      textView.setSelectedRange(NSRange(location: 0, length: 0))
+      textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
+      textView.needsDisplay = true
+      textView.enclosingScrollView?.needsDisplay = true
+    }
     panel.center()
     panel.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
@@ -548,18 +559,29 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     panel.isReleasedWhenClosed = false
     panel.level = .floating
 
-    let scrollView = NSScrollView(frame: panel.contentView?.bounds ?? .zero)
+    let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 560, height: 360))
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     scrollView.hasVerticalScroller = true
     scrollView.hasHorizontalScroller = false
     scrollView.borderType = .noBorder
+    scrollView.drawsBackground = true
+    scrollView.backgroundColor = .textBackgroundColor
 
-    let textView = NSTextView()
+    let textView = NSTextView(frame: scrollView.bounds)
     textView.isEditable = false
     textView.isSelectable = true
-    textView.font = NSFont.systemFont(ofSize: 14)
+    textView.font = panelFont
+    textView.textColor = .labelColor
+    textView.drawsBackground = true
+    textView.backgroundColor = .textBackgroundColor
     textView.textContainerInset = NSSize(width: 12, height: 12)
+    textView.minSize = NSSize(width: 0, height: scrollView.contentSize.height)
+    textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+    textView.isVerticallyResizable = true
+    textView.isHorizontallyResizable = false
     textView.autoresizingMask = [.width]
+    textView.textContainer?.containerSize = NSSize(width: scrollView.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+    textView.textContainer?.widthTracksTextView = true
     scrollView.documentView = textView
 
     panel.contentView?.addSubview(scrollView)
