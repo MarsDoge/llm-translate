@@ -63,7 +63,8 @@ print_edges() {
 }
 
 generate_mermaid_block() {
-  local input_label plugin_label autoload_label cli_label compat_label
+  local terminal_label input_label plugin_label autoload_label mac_input_label mac_app_label speech_label
+  local cli_label compat_label
   local direct_title compat_title local_title mt_title
   local direct_id='direct'
   local compat_id='compat_group'
@@ -75,9 +76,13 @@ generate_mermaid_block() {
 
   case "$locale" in
     zh)
+      terminal_label='终端 stdin / 管线'
       input_label='Vim 可视选区 / 整个 buffer'
       plugin_label='plugin/llm-translate.vim\n命令与映射'
       autoload_label='autoload/llm_translate.vim\n选区 / buffer 执行入口'
+      mac_input_label='macOS 选中文字\n任意 app'
+      mac_app_label='macos/LLMTranslateMac\nSwift 菜单栏 app\ntranslate | speak'
+      speech_label='macOS NSSpeechSynthesizer\n系统文本转语音'
       cli_label='bin/llm-translate\n任务分发\ntranslate | optimize | bugfix'
       compat_label='lib/openai_compat.sh\n共享 chat-completions helper'
       direct_title='直连 provider 脚本'
@@ -86,9 +91,13 @@ generate_mermaid_block() {
       mt_title='翻译 API'
       ;;
     *)
+      terminal_label='Terminal stdin / pipe'
       input_label='Vim selection / whole buffer'
       plugin_label='plugin/llm-translate.vim\ncommands + mappings'
       autoload_label='autoload/llm_translate.vim\nselection / buffer runners'
+      mac_input_label='macOS selected text\nany app'
+      mac_app_label='macos/LLMTranslateMac\nSwift menu-bar app\ntranslate | speak'
+      speech_label='macOS NSSpeechSynthesizer\nsystem text-to-speech'
       cli_label='bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix'
       compat_label='lib/openai_compat.sh\nshared chat-completions helper'
       direct_title='Direct provider scripts'
@@ -100,16 +109,23 @@ generate_mermaid_block() {
 
   printf '%s\n' '```mermaid'
   printf '%s\n' 'flowchart LR'
+  printf '  Terminal["%s"]\n' "$terminal_label"
   printf '  Input["%s"]\n' "$input_label"
   printf '  Plugin["%s"]\n' "$plugin_label"
   printf '  Autoload["%s"]\n' "$autoload_label"
+  printf '  MacInput["%s"]\n' "$mac_input_label"
+  printf '  MacApp["%s"]\n' "$mac_app_label"
+  printf '  Speech["%s"]\n' "$speech_label"
   printf '  CLI["%s"]\n' "$cli_label"
 
   if [ "${#compat_providers[@]}" -gt 0 ]; then
     printf '  Compat["%s"]\n' "$compat_label"
   fi
 
+  printf '  Terminal --> CLI\n'
   printf '  Input --> Plugin --> Autoload --> CLI\n'
+  printf '  MacInput --> MacApp --> CLI\n'
+  printf '  MacApp --> Speech\n'
   print_group "$direct_id" "$direct_title" "${direct_providers[@]}"
   print_group "$compat_id" "$compat_title" "${compat_providers[@]}"
   print_group "$local_id" "$local_title" "${local_providers[@]}"

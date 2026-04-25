@@ -2,23 +2,24 @@
 
 English · [简体中文](./README.zh-CN.md)
 
-A tiny, dependency-light tool for the terminal and Vim, backed by large
+A tiny, dependency-light tool for the terminal, Vim, and macOS, backed by large
 language models. One CLI, three tasks — **translate** text, **optimize**
 code, or **bugfix** a snippet — with swappable providers (**DeepSeek**,
 **OpenAI**, **Anthropic Claude**, local **Ollama**, **Aliyun Coding Plan**,
 plus zero-config **MyMemory** for translation) and a Vim plugin that runs
-any task on the current selection or buffer.
+any task on the current selection or buffer. The macOS menu-bar app can
+translate or speak selected text from any app.
 
 ```text
-┌─────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
-│ vim selection   │ ──▶ │ llm-translate (CLI)      │ ──▶ │ provider backends                  │
-│ or whole buffer │     │ task: translate          │     │ openai_compat:                     │
-│                 │     │       optimize           │     │   aliyun-codingplan, doubao,      │
-│                 │     │       bugfix             │     │   grok, kimi, mistral, qwen,      │
-│                 │     │                          │     │   zhipu                            │
-│                 │     │                          │     │ direct/local: claude, deepseek,   │
-│                 │     │                          │     │   openai, ollama, mymemory        │
-└─────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
+┌──────────────────────┐     ┌────────────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
+│ entrypoints          │     │ integrations           │     │ llm-translate (CLI)      │     │ provider backends                  │
+│ terminal stdin       │ ──▶ │ shell pipeline         │ ──▶ │ task: translate          │ ──▶ │ openai_compat:                     │
+│ Vim selection/buffer │ ──▶ │ Vim plugin/autoload    │ ──▶ │       optimize           │     │   aliyun-codingplan, doubao,      │
+│ macOS selected text  │ ──▶ │ Swift menu-bar app     │ ──▶ │       bugfix             │     │   grok, kimi, mistral, qwen,      │
+│                      │     │ speak: NSSpeechSynth   │     │                          │     │   zhipu                            │
+│                      │     │                        │     │                          │     │ direct/local: claude, deepseek,   │
+│                      │     │                        │     │                          │     │   openai, ollama, mymemory        │
+└──────────────────────┘     └────────────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
 
 For the detailed Mermaid diagram generated from the current repository paths,
@@ -34,6 +35,8 @@ see [docs/architecture.md](./docs/architecture.md). Refresh it with
 - **Streaming-friendly CLI** — reads from stdin, writes to stdout. Pipe anything.
 - **Vim plugin** — `<leader>t` / `<leader>o` / `<leader>b` run translate / optimize
   / bugfix on the visual selection. Code tasks open a two-pane diff in a fresh tab.
+- **macOS menu-bar app** — translate selected text with the CLI or speak it with
+  the system `NSSpeechSynthesizer`.
 - **Format-preserving prompt** — code blocks, paths, identifiers, and markdown are kept intact.
 
 ## Install
