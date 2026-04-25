@@ -12,12 +12,19 @@ The script rewrites only the section between the markers below.
 <!-- ARCHITECTURE_MERMAID:START -->
 ```mermaid
 flowchart LR
+  Terminal["Terminal stdin / pipe"]
   Input["Vim selection / whole buffer"]
   Plugin["plugin/llm-translate.vim\ncommands + mappings"]
   Autoload["autoload/llm_translate.vim\nselection / buffer runners"]
+  MacInput["macOS selected text\nany app"]
+  MacApp["macos/LLMTranslateMac\nSwift menu-bar app\ntranslate | speak"]
+  Speech["macOS NSSpeechSynthesizer\nsystem text-to-speech"]
   CLI["bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix"]
   Compat["lib/openai_compat.sh\nshared chat-completions helper"]
+  Terminal --> CLI
   Input --> Plugin --> Autoload --> CLI
+  MacInput --> MacApp --> CLI
+  MacApp --> Speech
   subgraph direct["Direct provider scripts"]
     direct_claude["lib/providers/claude.sh"]
     direct_deepseek["lib/providers/deepseek.sh"]

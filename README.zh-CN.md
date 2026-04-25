@@ -2,22 +2,23 @@
 
 [English](./README.md) · 简体中文
 
-一个给终端和 Vim 用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
+一个给终端、Vim 和 macOS 用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
 **translate**（翻译文本）、**optimize**（优化代码）、**bugfix**（修常见 bug） ——
 可切换的 provider（**DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
 **Ollama**、**阿里云 Coding Plan**，以及零配置的 **MyMemory** 用于翻译）。
-配套的 Vim 插件可以对当前选区或整个 buffer 跑任意一个任务。
+配套的 Vim 插件可以对当前选区或整个 buffer 跑任意一个任务；macOS 菜单栏 app
+可以翻译或朗读任意 app 里的选中文字。
 
 ```text
-┌─────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
-│ vim 可视选区    │ ──▶ │ llm-translate (CLI)      │ ──▶ │ provider 后端                     │
-│ 或整个 buffer   │     │ 任务: translate          │     │ openai_compat:                     │
-│                 │     │       optimize           │     │   aliyun-codingplan, doubao,      │
-│                 │     │       bugfix             │     │   grok, kimi, mistral, qwen,      │
-│                 │     │                          │     │   zhipu                            │
-│                 │     │                          │     │ 直连/本地: claude, deepseek,      │
-│                 │     │                          │     │   openai, ollama, mymemory        │
-└─────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
+┌──────────────────────┐     ┌────────────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
+│ 入口                 │     │ 集成层                 │     │ llm-translate (CLI)      │     │ provider 后端                     │
+│ 终端 stdin           │ ──▶ │ shell 管线             │ ──▶ │ 任务: translate          │ ──▶ │ openai_compat:                     │
+│ Vim 选区/buffer      │ ──▶ │ Vim plugin/autoload    │ ──▶ │       optimize           │     │   aliyun-codingplan, doubao,      │
+│ macOS 选中文字       │ ──▶ │ Swift 菜单栏 app       │ ──▶ │       bugfix             │     │   grok, kimi, mistral, qwen,      │
+│                      │     │ 发音: NSSpeechSynth    │     │                          │     │   zhipu                            │
+│                      │     │                        │     │                          │     │ 直连/本地: claude, deepseek,      │
+│                      │     │                        │     │                          │     │   openai, ollama, mymemory        │
+└──────────────────────┘     └────────────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
 
 详细 Mermaid 架构图放在 [docs/architecture.zh-CN.md](./docs/architecture.zh-CN.md)；它会按
@@ -32,6 +33,8 @@
 - **管道友好的 CLI** —— 从 stdin 读、写到 stdout，任何东西都能管道进去。
 - **Vim 插件** —— `<leader>t` / `<leader>o` / `<leader>b` 分别触发 translate /
   optimize / bugfix；代码类任务会在新 tab 里打开左右对比 diff。
+- **macOS 菜单栏 app** —— 对选中文字调用 CLI 翻译，或用系统
+  `NSSpeechSynthesizer` 发音。
 - **保留格式的 prompt** —— 代码块、路径、标识符、markdown 原样保留。
 - **零配置兜底** —— 没配任何 API key 时用 `-p mymemory` 依然能翻译。
 

@@ -11,12 +11,19 @@
 <!-- ARCHITECTURE_MERMAID:START -->
 ```mermaid
 flowchart LR
+  Terminal["终端 stdin / 管线"]
   Input["Vim 可视选区 / 整个 buffer"]
   Plugin["plugin/llm-translate.vim\n命令与映射"]
   Autoload["autoload/llm_translate.vim\n选区 / buffer 执行入口"]
+  MacInput["macOS 选中文字\n任意 app"]
+  MacApp["macos/LLMTranslateMac\nSwift 菜单栏 app\ntranslate | speak"]
+  Speech["macOS NSSpeechSynthesizer\n系统文本转语音"]
   CLI["bin/llm-translate\n任务分发\ntranslate | optimize | bugfix"]
   Compat["lib/openai_compat.sh\n共享 chat-completions helper"]
+  Terminal --> CLI
   Input --> Plugin --> Autoload --> CLI
+  MacInput --> MacApp --> CLI
+  MacApp --> Speech
   subgraph direct["直连 provider 脚本"]
     direct_claude["lib/providers/claude.sh"]
     direct_deepseek["lib/providers/deepseek.sh"]
