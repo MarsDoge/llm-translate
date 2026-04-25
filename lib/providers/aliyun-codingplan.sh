@@ -10,7 +10,9 @@ ALIYUN_CODING_PLAN_KEY="${ALIYUN_CODING_PLAN_API_KEY:-${CODING_PLAN_API_KEY:-${B
 : "${LLM_TRANSLATE_SYSTEM:?missing system prompt}"
 
 # shellcheck source=../openai_compat.sh
-. "$(dirname "$(readlink -f "$0")")/../openai_compat.sh"
+PROVIDER_DIR="$(cd -P "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1091
+. "$PROVIDER_DIR/../openai_compat.sh"
 
 MODEL="${LLM_TRANSLATE_MODEL:-qwen3.5-plus}"
 [ -n "$MODEL" ] || MODEL="qwen3.5-plus"

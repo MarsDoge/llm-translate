@@ -31,7 +31,9 @@ payload="$(jq -n \
 
 if [ "$STREAM" = "1" ]; then
   # shellcheck source=../stream.sh
-  . "$(dirname "$(readlink -f "$0")")/../stream.sh"
+  PROVIDER_DIR="$(cd -P "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
+  # shellcheck disable=SC1091
+  . "$PROVIDER_DIR/../stream.sh"
   set -o pipefail
   curl -sS -N "$ENDPOINT" \
     -H "Authorization: Bearer $OPENAI_API_KEY" \

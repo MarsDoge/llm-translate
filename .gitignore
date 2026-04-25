@@ -7,3 +7,5 @@
 !.env.example
 /tmp/
 /dist/
+macos/LLMTranslateMac/.build/
+macos/LLMTranslateMac/dist/
