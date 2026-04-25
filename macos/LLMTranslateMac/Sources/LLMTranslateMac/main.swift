@@ -3,7 +3,7 @@ import ApplicationServices
 import Carbon
 import Foundation
 
-private enum AppFailure: Error, CustomStringConvertible {
+private enum AppFailure: Error, CustomStringConvertible, LocalizedError {
   case accessibilityRequired(String)
   case noSelectedText
   case cliNotFound
@@ -27,6 +27,10 @@ private enum AppFailure: Error, CustomStringConvertible {
     case .commandFailed(let message):
       return message.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+  }
+
+  var errorDescription: String? {
+    description
   }
 }
 
@@ -213,6 +217,11 @@ private final class Translator {
     if let configuredPath = environment["LLM_TRANSLATE_CLI"], fileManager.fileExists(atPath: configuredPath) {
       return configuredPath
     }
+    if let bundledPath = Bundle.main.resourceURL?
+      .appendingPathComponent("llm-translate/bin/llm-translate").path,
+       fileManager.fileExists(atPath: bundledPath) {
+      return bundledPath
+    }
     if let cliPath = findUpward(from: fileManager.currentDirectoryPath) {
       return cliPath
     }
@@ -244,6 +253,13 @@ private final class Translator {
 
     return nil
   }
+}
+
+private func describe(_ error: Error) -> String {
+  if let localizedError = error as? LocalizedError, let description = localizedError.errorDescription {
+    return description
+  }
+  return error.localizedDescription
 }
 
 private final class HotKeyManager {
@@ -386,7 +402,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       case .success(let translated):
         self?.showPanel(title: "Translation Test", body: translated)
       case .failure(let error):
-        self?.showPanel(title: "Translation Test Failed", body: "\(error)")
+        self?.showPanel(title: "Translation Test Failed", body: describe(error))
       }
     }
   }
@@ -400,11 +416,11 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         case .success(let translated):
           self?.showPanel(title: "Translation", body: translated)
         case .failure(let error):
-          self?.showPanel(title: "Translation Failed", body: "\(error)")
+          self?.showPanel(title: "Translation Failed", body: describe(error))
         }
       }
     } catch {
-      showPanel(title: "Translation Failed", body: "\(error)")
+      showPanel(title: "Translation Failed", body: describe(error))
     }
   }
 
@@ -414,7 +430,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       speechSynthesizer.stopSpeaking()
       speechSynthesizer.startSpeaking(text)
     } catch {
-      showPanel(title: "Speak Failed", body: "\(error)")
+      showPanel(title: "Speak Failed", body: describe(error))
     }
   }
 
