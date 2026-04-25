@@ -299,6 +299,33 @@ private func describe(_ error: Error) -> String {
   return error.localizedDescription
 }
 
+private enum AppLog {
+  private static var logURL: URL {
+    FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent("Library/Logs/LLMTranslateMac.log")
+  }
+
+  static func write(_ message: String) {
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let entry = "[\(timestamp)] \(message)\n"
+    let fileManager = FileManager.default
+    let directory = logURL.deletingLastPathComponent()
+    try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    if fileManager.fileExists(atPath: logURL.path),
+       let handle = try? FileHandle(forWritingTo: logURL) {
+      defer { try? handle.close() }
+      _ = try? handle.seekToEnd()
+      if let data = entry.data(using: .utf8) {
+        try? handle.write(contentsOf: data)
+      }
+      return
+    }
+
+    try? entry.write(to: logURL, atomically: true, encoding: .utf8)
+  }
+}
+
 private final class HotKeyManager {
   private let signature = OSType(0x4c544d54)
   private var callbacks: [UInt32: () -> Void] = [:]
@@ -434,19 +461,35 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   @objc private func testTranslation() {
+    AppLog.write("Test Translation started\n\(translator.diagnostics)")
     showPanel(title: "Translating", body: "Translating test text...")
     translator.translate("Hello, world!") { [weak self] result in
       switch result {
       case .success(let translated):
+        AppLog.write("Test Translation succeeded: \(translated)")
         self?.showPanel(title: "Translation Test", body: translated)
       case .failure(let error):
-        self?.showPanel(title: "Translation Test Failed", body: describe(error))
+        let message = describe(error)
+        AppLog.write("Test Translation failed:\n\(message)")
+        self?.showPanel(title: "Translation Test Failed", body: message)
       }
     }
   }
 
   @objc private func showDiagnostics() {
-    showPanel(title: "Diagnostics", body: translator.diagnostics)
+    let diagnostics = translator.diagnostics
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(diagnostics, forType: .string)
+    AppLog.write("Diagnostics requested\n\(diagnostics)")
+    showPanel(
+      title: "Diagnostics",
+      body: """
+      \(diagnostics)
+
+      Diagnostics copied to clipboard.
+      Log: ~/Library/Logs/LLMTranslateMac.log
+      """
+    )
   }
 
   @objc private func translateSelection() {
@@ -458,11 +501,15 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         case .success(let translated):
           self?.showPanel(title: "Translation", body: translated)
         case .failure(let error):
-          self?.showPanel(title: "Translation Failed", body: describe(error))
+          let message = describe(error)
+          AppLog.write("Translate Selection failed:\n\(message)")
+          self?.showPanel(title: "Translation Failed", body: message)
         }
       }
     } catch {
-      showPanel(title: "Translation Failed", body: describe(error))
+      let message = describe(error)
+      AppLog.write("Translate Selection failed before CLI:\n\(message)")
+      showPanel(title: "Translation Failed", body: message)
     }
   }
 
@@ -472,14 +519,19 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       speechSynthesizer.stopSpeaking()
       speechSynthesizer.startSpeaking(text)
     } catch {
-      showPanel(title: "Speak Failed", body: describe(error))
+      let message = describe(error)
+      AppLog.write("Speak Selection failed:\n\(message)")
+      showPanel(title: "Speak Failed", body: message)
     }
   }
 
   private func showPanel(title: String, body: String) {
     let panel = panel ?? makePanel()
     panel.title = title
-    textView?.string = body.isEmpty ? "(empty result)" : body
+    let displayBody = body.isEmpty ? "(empty result)" : body
+    textView?.string = displayBody
+    textView?.setSelectedRange(NSRange(location: 0, length: 0))
+    textView?.scrollRangeToVisible(NSRange(location: 0, length: 0))
     panel.center()
     panel.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
