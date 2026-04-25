@@ -330,19 +330,28 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     statusItem.button?.title = "译"
 
     let menu = NSMenu()
-    menu.addItem(NSMenuItem(title: "Show Help", action: #selector(showHelp), keyEquivalent: ""))
+    addMenuItem(to: menu, title: "Show Help", action: #selector(showHelp))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(NSMenuItem(title: "Translate Selection", action: #selector(translateSelection), keyEquivalent: ""))
-    menu.addItem(NSMenuItem(title: "Speak Selection", action: #selector(speakSelection), keyEquivalent: ""))
+    addMenuItem(to: menu, title: "Translate Selection", action: #selector(translateSelection))
+    addMenuItem(to: menu, title: "Speak Selection", action: #selector(speakSelection))
+    addMenuItem(to: menu, title: "Test Translation", action: #selector(testTranslation))
     menu.addItem(NSMenuItem.separator())
     let shortcutItem = NSMenuItem(title: "Shortcuts: ⌥⌘T translate, ⌥⌘S speak", action: nil, keyEquivalent: "")
     shortcutItem.isEnabled = false
     menu.addItem(shortcutItem)
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+    quitItem.target = NSApp
+    menu.addItem(quitItem)
 
     statusItem.menu = menu
     self.statusItem = statusItem
+  }
+
+  private func addMenuItem(to menu: NSMenu, title: String, action: Selector) {
+    let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+    item.target = self
+    menu.addItem(item)
   }
 
   @objc private func showHelp() {
@@ -357,8 +366,22 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       Option + Command + S  Speak selection
 
       You can also click the menu bar item named "译".
+
+      Use "Test Translation" from the menu to verify provider configuration without selecting text.
       """
     )
+  }
+
+  @objc private func testTranslation() {
+    showPanel(title: "Translating", body: "Translating test text...")
+    translator.translate("Hello, world!") { [weak self] result in
+      switch result {
+      case .success(let translated):
+        self?.showPanel(title: "Translation Test", body: translated)
+      case .failure(let error):
+        self?.showPanel(title: "Translation Test Failed", body: "\(error)")
+      }
+    }
   }
 
   @objc private func translateSelection() {
