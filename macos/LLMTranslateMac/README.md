@@ -39,6 +39,15 @@ chmod +x scripts/build-app.sh
 open dist/LLMTranslateMac.app
 ```
 
+For a stable Accessibility permission entry, install and run the app from a fixed path:
+
+```bash
+./scripts/build-app.sh --install
+open /Applications/LLMTranslateMac.app
+```
+
+When upgrading, rebuild with `--install` again so the app stays at the same path.
+
 ## Translation Provider
 
 The app inherits the same environment variables as `llm-translate`.

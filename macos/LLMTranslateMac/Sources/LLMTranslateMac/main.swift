@@ -3,16 +3,23 @@ import ApplicationServices
 import Carbon
 import Foundation
 
-private enum AppFailure: Error, CustomStringConvertible {
-  case accessibilityRequired
+private enum AppFailure: Error, CustomStringConvertible, LocalizedError {
+  case accessibilityRequired(String)
   case noSelectedText
   case cliNotFound
   case commandFailed(String)
 
   var description: String {
     switch self {
-    case .accessibilityRequired:
-      return "需要在 System Settings > Privacy & Security > Accessibility 中允许本应用控制电脑。"
+    case .accessibilityRequired(let appPath):
+      return """
+      需要在 System Settings > Privacy & Security > Accessibility 中允许本应用控制电脑。
+
+      当前运行路径:
+      \(appPath)
+
+      如果你已经打开过权限，请先删除旧的 LLMTranslateMac 条目，再把这份 .app 重新加进去。
+      """
     case .noSelectedText:
       return "没有读到选中文本。请先选中文字，再触发翻译或发音。"
     case .cliNotFound:
@@ -20,6 +27,10 @@ private enum AppFailure: Error, CustomStringConvertible {
     case .commandFailed(let message):
       return message.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+  }
+
+  var errorDescription: String? {
+    description
   }
 }
 
@@ -60,7 +71,7 @@ private final class SelectedTextReader {
   func readSelectedText() throws -> String {
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
     guard AXIsProcessTrustedWithOptions(options) else {
-      throw AppFailure.accessibilityRequired
+      throw AppFailure.accessibilityRequired(Bundle.main.bundlePath)
     }
 
     let pasteboard = NSPasteboard.general
@@ -120,6 +131,29 @@ private final class Translator {
     }
   }
 
+  var diagnostics: String {
+    var environment = ProcessInfo.processInfo.environment
+    loadConfigFile(into: &environment)
+    ensureHomebrewPath(in: &environment)
+    applyDefaults(to: &environment)
+
+    let provider = environment["LLM_TRANSLATE_PROVIDER"] ?? "(unset)"
+    let model = environment["LLM_TRANSLATE_MODEL"] ?? "(provider default)"
+    let target = environment["LLM_TRANSLATE_TARGET"] ?? "(unset)"
+    let configPath = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".config/llm-translate/env").path
+    let configExists = FileManager.default.fileExists(atPath: configPath) ? "yes" : "no"
+
+    return """
+    CLI: \(cliPath)
+    Provider: \(provider)
+    Model: \(model)
+    Target: \(target)
+    Config: \(configPath) exists: \(configExists)
+    PATH: \(environment["PATH"] ?? "")
+    """
+  }
+
   private func runTranslation(_ text: String) throws -> String {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -128,12 +162,7 @@ private final class Translator {
     var environment = ProcessInfo.processInfo.environment
     loadConfigFile(into: &environment)
     ensureHomebrewPath(in: &environment)
-    if environment["LLM_TRANSLATE_PROVIDER"] == nil && environment["DEEPSEEK_API_KEY"] == nil {
-      environment["LLM_TRANSLATE_PROVIDER"] = "mymemory"
-    }
-    if environment["LLM_TRANSLATE_TARGET"] == nil {
-      environment["LLM_TRANSLATE_TARGET"] = "Simplified Chinese"
-    }
+    applyDefaults(to: &environment)
     process.environment = environment
 
     let input = Pipe()
@@ -157,7 +186,26 @@ private final class Translator {
     }
 
     let stderr = String(data: errorData, encoding: .utf8) ?? ""
-    throw AppFailure.commandFailed(stderr.isEmpty ? stdout : stderr)
+    throw AppFailure.commandFailed("""
+    CLI failed with exit code \(process.terminationStatus).
+
+    \(diagnostics)
+
+    stderr:
+    \(stderr.isEmpty ? "(empty)" : stderr)
+
+    stdout:
+    \(stdout.isEmpty ? "(empty)" : stdout)
+    """)
+  }
+
+  private func applyDefaults(to environment: inout [String: String]) {
+    if environment["LLM_TRANSLATE_PROVIDER"] == nil {
+      environment["LLM_TRANSLATE_PROVIDER"] = "mymemory"
+    }
+    if environment["LLM_TRANSLATE_TARGET"] == nil {
+      environment["LLM_TRANSLATE_TARGET"] = "Simplified Chinese"
+    }
   }
 
   private func loadConfigFile(into environment: inout [String: String]) {
@@ -206,6 +254,11 @@ private final class Translator {
     if let configuredPath = environment["LLM_TRANSLATE_CLI"], fileManager.fileExists(atPath: configuredPath) {
       return configuredPath
     }
+    if let bundledPath = Bundle.main.resourceURL?
+      .appendingPathComponent("llm-translate/bin/llm-translate").path,
+       fileManager.fileExists(atPath: bundledPath) {
+      return bundledPath
+    }
     if let cliPath = findUpward(from: fileManager.currentDirectoryPath) {
       return cliPath
     }
@@ -236,6 +289,40 @@ private final class Translator {
     }
 
     return nil
+  }
+}
+
+private func describe(_ error: Error) -> String {
+  if let localizedError = error as? LocalizedError, let description = localizedError.errorDescription {
+    return description
+  }
+  return error.localizedDescription
+}
+
+private enum AppLog {
+  private static var logURL: URL {
+    FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent("Library/Logs/LLMTranslateMac.log")
+  }
+
+  static func write(_ message: String) {
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let entry = "[\(timestamp)] \(message)\n"
+    let fileManager = FileManager.default
+    let directory = logURL.deletingLastPathComponent()
+    try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    if fileManager.fileExists(atPath: logURL.path),
+       let handle = try? FileHandle(forWritingTo: logURL) {
+      defer { try? handle.close() }
+      _ = try? handle.seekToEnd()
+      if let data = entry.data(using: .utf8) {
+        try? handle.write(contentsOf: data)
+      }
+      return
+    }
+
+    try? entry.write(to: logURL, atomically: true, encoding: .utf8)
   }
 }
 
@@ -302,6 +389,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem?
   private var panel: NSPanel?
   private var textView: NSTextView?
+  private let panelFont = NSFont.systemFont(ofSize: 14)
 
   override init() {
     do {
@@ -330,19 +418,29 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     statusItem.button?.title = "译"
 
     let menu = NSMenu()
-    menu.addItem(NSMenuItem(title: "Show Help", action: #selector(showHelp), keyEquivalent: ""))
+    addMenuItem(to: menu, title: "Show Help", action: #selector(showHelp))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(NSMenuItem(title: "Translate Selection", action: #selector(translateSelection), keyEquivalent: ""))
-    menu.addItem(NSMenuItem(title: "Speak Selection", action: #selector(speakSelection), keyEquivalent: ""))
+    addMenuItem(to: menu, title: "Translate Selection", action: #selector(translateSelection))
+    addMenuItem(to: menu, title: "Speak Selection", action: #selector(speakSelection))
+    addMenuItem(to: menu, title: "Test Translation", action: #selector(testTranslation))
+    addMenuItem(to: menu, title: "Show Diagnostics", action: #selector(showDiagnostics))
     menu.addItem(NSMenuItem.separator())
     let shortcutItem = NSMenuItem(title: "Shortcuts: ⌥⌘T translate, ⌥⌘S speak", action: nil, keyEquivalent: "")
     shortcutItem.isEnabled = false
     menu.addItem(shortcutItem)
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+    quitItem.target = NSApp
+    menu.addItem(quitItem)
 
     statusItem.menu = menu
     self.statusItem = statusItem
+  }
+
+  private func addMenuItem(to menu: NSMenu, title: String, action: Selector) {
+    let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+    item.target = self
+    menu.addItem(item)
   }
 
   @objc private func showHelp() {
@@ -357,6 +455,40 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       Option + Command + S  Speak selection
 
       You can also click the menu bar item named "译".
+
+      Use "Test Translation" from the menu to verify provider configuration without selecting text.
+      """
+    )
+  }
+
+  @objc private func testTranslation() {
+    AppLog.write("Test Translation started\n\(translator.diagnostics)")
+    showPanel(title: "Translating", body: "Translating test text...")
+    translator.translate("Hello, world!") { [weak self] result in
+      switch result {
+      case .success(let translated):
+        AppLog.write("Test Translation succeeded: \(translated)")
+        self?.showPanel(title: "Translation Test", body: translated)
+      case .failure(let error):
+        let message = describe(error)
+        AppLog.write("Test Translation failed:\n\(message)")
+        self?.showPanel(title: "Translation Test Failed", body: message)
+      }
+    }
+  }
+
+  @objc private func showDiagnostics() {
+    let diagnostics = translator.diagnostics
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(diagnostics, forType: .string)
+    AppLog.write("Diagnostics requested\n\(diagnostics)")
+    showPanel(
+      title: "Diagnostics",
+      body: """
+      \(diagnostics)
+
+      Diagnostics copied to clipboard.
+      Log: ~/Library/Logs/LLMTranslateMac.log
       """
     )
   }
@@ -370,11 +502,15 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         case .success(let translated):
           self?.showPanel(title: "Translation", body: translated)
         case .failure(let error):
-          self?.showPanel(title: "Translation Failed", body: "\(error)")
+          let message = describe(error)
+          AppLog.write("Translate Selection failed:\n\(message)")
+          self?.showPanel(title: "Translation Failed", body: message)
         }
       }
     } catch {
-      showPanel(title: "Translation Failed", body: "\(error)")
+      let message = describe(error)
+      AppLog.write("Translate Selection failed before CLI:\n\(message)")
+      showPanel(title: "Translation Failed", body: message)
     }
   }
 
@@ -384,14 +520,29 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       speechSynthesizer.stopSpeaking()
       speechSynthesizer.startSpeaking(text)
     } catch {
-      showPanel(title: "Speak Failed", body: "\(error)")
+      let message = describe(error)
+      AppLog.write("Speak Selection failed:\n\(message)")
+      showPanel(title: "Speak Failed", body: message)
     }
   }
 
   private func showPanel(title: String, body: String) {
     let panel = panel ?? makePanel()
     panel.title = title
-    textView?.string = body.isEmpty ? "(empty result)" : body
+    let displayBody = body.isEmpty ? "(empty result)" : body
+    if let textView {
+      textView.textStorage?.setAttributedString(NSAttributedString(
+        string: displayBody,
+        attributes: [
+          .font: panelFont,
+          .foregroundColor: NSColor.labelColor
+        ]
+      ))
+      textView.setSelectedRange(NSRange(location: 0, length: 0))
+      textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
+      textView.needsDisplay = true
+      textView.enclosingScrollView?.needsDisplay = true
+    }
     panel.center()
     panel.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
@@ -408,18 +559,29 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     panel.isReleasedWhenClosed = false
     panel.level = .floating
 
-    let scrollView = NSScrollView(frame: panel.contentView?.bounds ?? .zero)
+    let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 560, height: 360))
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     scrollView.hasVerticalScroller = true
     scrollView.hasHorizontalScroller = false
     scrollView.borderType = .noBorder
+    scrollView.drawsBackground = true
+    scrollView.backgroundColor = .textBackgroundColor
 
-    let textView = NSTextView()
+    let textView = NSTextView(frame: scrollView.bounds)
     textView.isEditable = false
     textView.isSelectable = true
-    textView.font = NSFont.systemFont(ofSize: 14)
+    textView.font = panelFont
+    textView.textColor = .labelColor
+    textView.drawsBackground = true
+    textView.backgroundColor = .textBackgroundColor
     textView.textContainerInset = NSSize(width: 12, height: 12)
+    textView.minSize = NSSize(width: 0, height: scrollView.contentSize.height)
+    textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+    textView.isVerticallyResizable = true
+    textView.isHorizontallyResizable = false
     textView.autoresizingMask = [.width]
+    textView.textContainer?.containerSize = NSSize(width: scrollView.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+    textView.textContainer?.widthTracksTextView = true
     scrollView.documentView = textView
 
     panel.contentView?.addSubview(scrollView)

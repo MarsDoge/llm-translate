@@ -39,6 +39,15 @@ chmod +x scripts/build-app.sh
 open dist/LLMTranslateMac.app
 ```
 
+为了让辅助功能权限条目更稳定，建议安装并固定从同一个路径运行：
+
+```bash
+./scripts/build-app.sh --install
+open /Applications/LLMTranslateMac.app
+```
+
+后续升级时继续用 `--install` 重新构建覆盖，这样 app 路径保持不变。
+
 ## 翻译 Provider
 
 app 继承和 `llm-translate` 相同的环境变量。
