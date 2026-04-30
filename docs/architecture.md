@@ -19,12 +19,17 @@ flowchart LR
   MacInput["macOS selected text\nany app"]
   MacApp["macos/LLMTranslateMac\nSwift menu-bar app\ntranslate | speak"]
   Speech["macOS NSSpeechSynthesizer\nsystem text-to-speech"]
+  LinuxInput["Linux selected text\nX11 / Wayland"]
+  LinuxHelper["linux/LLMTranslateLinux\nGTK app\ntranslate | speak"]
+  LinuxSpeech["Linux TTS\nspd-say / espeak"]
   CLI["bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix"]
   Compat["lib/openai_compat.sh\nshared chat-completions helper"]
   Terminal --> CLI
   Input --> Plugin --> Autoload --> CLI
   MacInput --> MacApp --> CLI
   MacApp --> Speech
+  LinuxInput --> LinuxHelper --> CLI
+  LinuxHelper --> LinuxSpeech
   subgraph direct["Direct provider scripts"]
     direct_claude["lib/providers/claude.sh"]
     direct_deepseek["lib/providers/deepseek.sh"]
