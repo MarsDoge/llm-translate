@@ -2,12 +2,12 @@
 
 [English](./README.md) · 简体中文
 
-一个给终端、Vim 和 macOS 用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
+一个给终端、Vim、macOS 和 Linux 图形桌面用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
 **translate**（翻译文本）、**optimize**（优化代码）、**bugfix**（修常见 bug） ——
 可切换的 provider（**DeepSeek**、**OpenAI**、**Anthropic Claude**、本地
 **Ollama**、**阿里云 Coding Plan**，以及零配置的 **MyMemory** 用于翻译）。
 配套的 Vim 插件可以对当前选区或整个 buffer 跑任意一个任务；macOS 菜单栏 app
-可以翻译或朗读任意 app 里的选中文字。
+和 Linux GTK 图形应用可以翻译或朗读任意 app 里的选中文字。
 
 ```text
 ┌──────────────────────┐     ┌────────────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
@@ -15,9 +15,9 @@
 │ 终端 stdin           │ ──▶ │ shell 管线             │ ──▶ │ 任务: translate          │ ──▶ │ openai_compat:                     │
 │ Vim 选区/buffer      │ ──▶ │ Vim plugin/autoload    │ ──▶ │       optimize           │     │   aliyun-codingplan, doubao,      │
 │ macOS 选中文字       │ ──▶ │ Swift 菜单栏 app       │ ──▶ │       bugfix             │     │   grok, kimi, mistral, qwen,      │
-│                      │     │ 发音: NSSpeechSynth    │     │                          │     │   zhipu                            │
-│                      │     │                        │     │                          │     │ 直连/本地: claude, deepseek,      │
-│                      │     │                        │     │                          │     │   openai, ollama, mymemory        │
+│ Linux 选中文字       │ ──▶ │ GTK 图形应用          │     │                          │     │   zhipu                            │
+│                      │     │ 发音: NSSpeechSynth    │     │                          │     │ 直连/本地: claude, deepseek,      │
+│                      │     │ 发音: spd-say/espeak   │     │                          │     │   openai, ollama, mymemory        │
 └──────────────────────┘     └────────────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
 
@@ -35,6 +35,8 @@
   optimize / bugfix；代码类任务会在新 tab 里打开左右对比 diff。
 - **macOS 菜单栏 app** —— 对选中文字调用 CLI 翻译，或用系统
   `NSSpeechSynthesizer` 发音。
+- **Linux GTK 图形应用** —— 在 X11 / Wayland 下翻译选区或剪贴板内容，
+  并支持本机 TTS 兜底。
 - **保留格式的 prompt** —— 代码块、路径、标识符、markdown 原样保留。
 - **零配置兜底** —— 没配任何 API key 时用 `-p mymemory` 依然能翻译。
 
@@ -135,6 +137,24 @@ echo "Hello, world!" | llm-translate -p mymemory -t "Simplified Chinese"
 
 能看到翻译说明 CLI 和 `$PATH` 都连通了。下一步根据需要配一个 LLM provider
 获得更好的翻译质量。
+
+### Linux GTK 图形应用
+
+如果要在 Linux 图形环境里“一键安装后直接用快捷键”，使用：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash -s -- --linux-desktop --install-linux-deps
+```
+
+安装脚本会构建 GTK 应用、安装桌面启动项，并在 GNOME / Xfce 下尽量自动绑定：
+
+- `Super+Alt+T`：翻译当前选区
+- `Super+Alt+S`：朗读当前选区
+
+如果桌面环境不支持自动写入全局快捷键，安装脚本会打印需要手动绑定的命令。
+它通过 `xclip`、`xdotool`、`wl-clipboard`、`wtype` 等常见桌面工具兼容 X11 和
+Wayland。GUI 详细依赖和使用方式见
+[linux/LLMTranslateLinux/README.zh-CN.md](./linux/LLMTranslateLinux/README.zh-CN.md)。
 
 ## 配置
 

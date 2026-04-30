@@ -22,6 +22,8 @@ SHARE_DIR_DEFAULT="$HOME/.local/share/llm-translate"
 SHARE_DIR="${LLM_TRANSLATE_DIR:-$SHARE_DIR_DEFAULT}"
 UNINSTALL=0
 SKIP_VIM=0
+LINUX_DESKTOP=0
+INSTALL_LINUX_DEPS=0
 
 info() { printf '\033[1;34m▸\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
@@ -33,7 +35,7 @@ usage() {
 install.sh — one-step installer for llm-translate
 
 USAGE
-  install.sh [--mode manual|vim-plug] [--prefix DIR] [--dir DIR]
+  install.sh [--mode manual|vim-plug] [--prefix DIR] [--dir DIR] [--linux-desktop] [--install-linux-deps]
   install.sh --uninstall
 
 OPTIONS
@@ -43,6 +45,9 @@ OPTIONS
                   (default: ~/.local/share/llm-translate in manual mode,
                             ~/.vim/plugged/llm-translate in vim-plug mode)
   --skip-vim      install the CLI only, don't touch vimrc
+  --linux-desktop install Linux GTK app, launcher, and best-effort shortcuts
+  --install-linux-deps
+                  with --linux-desktop, install distro packages via sudo
   --uninstall     remove symlink and config blocks this script added
   -h, --help      show this help
 
@@ -55,6 +60,9 @@ EXAMPLES
 
   # CLI only, I'll wire up Vim myself
   ./install.sh --skip-vim
+
+  # Linux GUI + shortcuts
+  ./install.sh --linux-desktop --install-linux-deps
 EOF
 }
 
@@ -67,6 +75,8 @@ while [[ $# -gt 0 ]]; do
     --dir)        SHARE_DIR="${2:?--dir needs a value}"; shift 2 ;;
     --dir=*)      SHARE_DIR="${1#*=}"; shift ;;
     --skip-vim)   SKIP_VIM=1; shift ;;
+    --linux-desktop) LINUX_DESKTOP=1; shift ;;
+    --install-linux-deps) INSTALL_LINUX_DEPS=1; shift ;;
     --uninstall)  UNINSTALL=1; shift ;;
     -h|--help)    usage; exit 0 ;;
     *) die "unknown option: $1 (try --help)" ;;
@@ -272,6 +282,23 @@ verify() {
   fi
 }
 
+config_linux_desktop() {
+  (( LINUX_DESKTOP )) || return 0
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    warn "--linux-desktop only applies on Linux; skipping"
+    return 0
+  fi
+  if [[ ! -x "$SHARE_DIR/linux/install-desktop.sh" ]]; then
+    warn "Linux desktop installer not found at $SHARE_DIR/linux/install-desktop.sh"
+    return 0
+  fi
+
+  info "installing Linux GTK app and desktop shortcuts"
+  local args=(--prefix "$PREFIX")
+  (( INSTALL_LINUX_DEPS )) && args+=(--install-deps)
+  "$SHARE_DIR/linux/install-desktop.sh" "${args[@]}"
+}
+
 remove_block() {
   # strip marker block from $1
   local file="$1"
@@ -306,6 +333,9 @@ remove_path_block() {
 
 uninstall() {
   info "removing $PREFIX/llm-translate"
+  if [[ -x "$SHARE_DIR/linux/install-desktop.sh" ]]; then
+    "$SHARE_DIR/linux/install-desktop.sh" --prefix "$PREFIX" --uninstall || true
+  fi
   rm -f "$PREFIX/llm-translate"
   for rc in "$HOME/.vimrc" "$HOME/.config/nvim/init.vim"; do
     remove_block "$rc"
@@ -329,12 +359,14 @@ main() {
       link_cli
       ensure_path
       config_vim_manual
+      config_linux_desktop
       ;;
     vim-plug)
       [[ "$SHARE_DIR" == "$SHARE_DIR_DEFAULT" ]] && SHARE_DIR="$HOME/.vim/plugged/llm-translate"
       config_vim_plug
       link_cli
       ensure_path
+      config_linux_desktop
       ;;
     *)
       die "unknown --mode: $MODE (want manual or vim-plug)"

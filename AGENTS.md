@@ -10,13 +10,13 @@ Run syntax checks before anything else:
 
 ```bash
 bash -n bin/llm-translate
-bash -n install.sh scripts/render-readme-diagrams.sh lib/openai_compat.sh lib/providers/*.sh
+bash -n install.sh scripts/render-readme-diagrams.sh linux/install-desktop.sh linux/llm-translate-linux lib/openai_compat.sh lib/providers/*.sh
 ```
 
 Lint with the same tool used in CI:
 
 ```bash
-shellcheck bin/llm-translate install.sh scripts/render-readme-diagrams.sh lib/openai_compat.sh lib/providers/*.sh macos/LLMTranslateMac/scripts/build-app.sh
+shellcheck bin/llm-translate install.sh scripts/render-readme-diagrams.sh linux/install-desktop.sh linux/llm-translate-linux lib/openai_compat.sh lib/providers/*.sh macos/LLMTranslateMac/scripts/build-app.sh
 ```
 
 Smoke-test the CLI locally:
@@ -38,6 +38,13 @@ Build the macOS app after touching `macos/LLMTranslateMac/`:
 cd macos/LLMTranslateMac
 swift build
 ./scripts/build-app.sh
+```
+
+Build the Linux GTK app after touching `linux/LLMTranslateLinux/`:
+
+```bash
+cd linux/LLMTranslateLinux
+make
 ```
 
 ## Coding Style & Naming Conventions

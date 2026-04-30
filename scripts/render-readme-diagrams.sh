@@ -64,6 +64,7 @@ print_edges() {
 
 generate_mermaid_block() {
   local terminal_label input_label plugin_label autoload_label mac_input_label mac_app_label speech_label
+  local linux_input_label linux_helper_label linux_speech_label
   local cli_label compat_label
   local direct_title compat_title local_title mt_title
   local direct_id='direct'
@@ -83,6 +84,9 @@ generate_mermaid_block() {
       mac_input_label='macOS 选中文字\n任意 app'
       mac_app_label='macos/LLMTranslateMac\nSwift 菜单栏 app\ntranslate | speak'
       speech_label='macOS NSSpeechSynthesizer\n系统文本转语音'
+      linux_input_label='Linux 选中文字\nX11 / Wayland'
+      linux_helper_label='linux/LLMTranslateLinux\nGTK 图形应用\ntranslate | speak'
+      linux_speech_label='Linux TTS\nspd-say / espeak'
       cli_label='bin/llm-translate\n任务分发\ntranslate | optimize | bugfix'
       compat_label='lib/openai_compat.sh\n共享 chat-completions helper'
       direct_title='直连 provider 脚本'
@@ -98,6 +102,9 @@ generate_mermaid_block() {
       mac_input_label='macOS selected text\nany app'
       mac_app_label='macos/LLMTranslateMac\nSwift menu-bar app\ntranslate | speak'
       speech_label='macOS NSSpeechSynthesizer\nsystem text-to-speech'
+      linux_input_label='Linux selected text\nX11 / Wayland'
+      linux_helper_label='linux/LLMTranslateLinux\nGTK app\ntranslate | speak'
+      linux_speech_label='Linux TTS\nspd-say / espeak'
       cli_label='bin/llm-translate\ntask dispatcher\ntranslate | optimize | bugfix'
       compat_label='lib/openai_compat.sh\nshared chat-completions helper'
       direct_title='Direct provider scripts'
@@ -116,6 +123,9 @@ generate_mermaid_block() {
   printf '  MacInput["%s"]\n' "$mac_input_label"
   printf '  MacApp["%s"]\n' "$mac_app_label"
   printf '  Speech["%s"]\n' "$speech_label"
+  printf '  LinuxInput["%s"]\n' "$linux_input_label"
+  printf '  LinuxHelper["%s"]\n' "$linux_helper_label"
+  printf '  LinuxSpeech["%s"]\n' "$linux_speech_label"
   printf '  CLI["%s"]\n' "$cli_label"
 
   if [ "${#compat_providers[@]}" -gt 0 ]; then
@@ -126,6 +136,8 @@ generate_mermaid_block() {
   printf '  Input --> Plugin --> Autoload --> CLI\n'
   printf '  MacInput --> MacApp --> CLI\n'
   printf '  MacApp --> Speech\n'
+  printf '  LinuxInput --> LinuxHelper --> CLI\n'
+  printf '  LinuxHelper --> LinuxSpeech\n'
   print_group "$direct_id" "$direct_title" "${direct_providers[@]}"
   print_group "$compat_id" "$compat_title" "${compat_providers[@]}"
   print_group "$local_id" "$local_title" "${local_providers[@]}"

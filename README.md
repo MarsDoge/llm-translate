@@ -2,13 +2,13 @@
 
 English · [简体中文](./README.zh-CN.md)
 
-A tiny, dependency-light tool for the terminal, Vim, and macOS, backed by large
+A tiny, dependency-light tool for the terminal, Vim, macOS, and Linux desktops, backed by large
 language models. One CLI, three tasks — **translate** text, **optimize**
 code, or **bugfix** a snippet — with swappable providers (**DeepSeek**,
 **OpenAI**, **Anthropic Claude**, local **Ollama**, **Aliyun Coding Plan**,
 plus zero-config **MyMemory** for translation) and a Vim plugin that runs
-any task on the current selection or buffer. The macOS menu-bar app can
-translate or speak selected text from any app.
+any task on the current selection or buffer. The macOS menu-bar app and Linux
+GTK app can translate or speak selected text from any app.
 
 ```text
 ┌──────────────────────┐     ┌────────────────────────┐     ┌──────────────────────────┐     ┌────────────────────────────────────┐
@@ -16,9 +16,9 @@ translate or speak selected text from any app.
 │ terminal stdin       │ ──▶ │ shell pipeline         │ ──▶ │ task: translate          │ ──▶ │ openai_compat:                     │
 │ Vim selection/buffer │ ──▶ │ Vim plugin/autoload    │ ──▶ │       optimize           │     │   aliyun-codingplan, doubao,      │
 │ macOS selected text  │ ──▶ │ Swift menu-bar app     │ ──▶ │       bugfix             │     │   grok, kimi, mistral, qwen,      │
-│                      │     │ speak: NSSpeechSynth   │     │                          │     │   zhipu                            │
-│                      │     │                        │     │                          │     │ direct/local: claude, deepseek,   │
-│                      │     │                        │     │                          │     │   openai, ollama, mymemory        │
+│ Linux selected text  │ ──▶ │ GTK desktop app        │     │                          │     │   zhipu                            │
+│                      │     │ speak: NSSpeechSynth   │     │                          │     │ direct/local: claude, deepseek,   │
+│                      │     │ speak: spd-say/espeak  │     │                          │     │   openai, ollama, mymemory        │
 └──────────────────────┘     └────────────────────────┘     └──────────────────────────┘     └────────────────────────────────────┘
 ```
 
@@ -37,6 +37,8 @@ see [docs/architecture.md](./docs/architecture.md). Refresh it with
   / bugfix on the visual selection. Code tasks open a two-pane diff in a fresh tab.
 - **macOS menu-bar app** — translate selected text with the CLI or speak it with
   the system `NSSpeechSynthesizer`.
+- **Linux GTK app** — translate selected text or clipboard contents under X11
+  or Wayland, with local TTS fallback.
 - **Format-preserving prompt** — code blocks, paths, identifiers, and markdown are kept intact.
 
 ## Install
@@ -135,6 +137,25 @@ echo "Hello, world!" | llm-translate -p mymemory -t "Simplified Chinese"
 
 If you see the translation, both the CLI and `$PATH` are wired correctly.
 Next, configure an LLM provider below for higher-quality translations.
+
+### Linux GTK App
+
+For one-command Linux GUI install with shortcuts:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarsDoge/llm-translate/main/install.sh | bash -s -- --linux-desktop --install-linux-deps
+```
+
+The installer builds the GTK app, installs desktop launchers, and tries to bind:
+
+- `Super+Alt+T`: translate current selection
+- `Super+Alt+S`: speak current selection
+
+If the desktop does not expose a writable global shortcut API, the installer
+prints the command to bind manually. It supports X11 and Wayland through common
+desktop tools such as `xclip`, `xdotool`, `wl-clipboard`, and `wtype`. See
+[linux/LLMTranslateLinux/README.md](./linux/LLMTranslateLinux/README.md) for
+GUI setup details.
 
 ## Configure
 
