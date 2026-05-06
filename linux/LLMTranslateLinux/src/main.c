@@ -8,6 +8,8 @@ typedef struct {
   GtkWidget *window;
   GtkWidget *text_view;
   GtkWidget *status_label;
+  GtkWidget *source_combo;
+  GtkWidget *target_combo;
   gchar *cli_path;
   gint startup_action;
 } AppState;
@@ -23,7 +25,40 @@ enum {
 typedef struct {
   AppState *state;
   gchar *input;
+  gchar *source;
+  gchar *target;
 } TranslateJob;
+
+static const gchar *SOURCE_LANGUAGES[] = {
+    "Auto Detect",
+    "Simplified Chinese",
+    "Traditional Chinese",
+    "English",
+    "Japanese",
+    "Korean",
+    "French",
+    "German",
+    "Spanish",
+    "Russian",
+    "Italian",
+    "Portuguese",
+    "Arabic",
+    NULL};
+
+static const gchar *TARGET_LANGUAGES[] = {
+    "Simplified Chinese",
+    "Traditional Chinese",
+    "English",
+    "Japanese",
+    "Korean",
+    "French",
+    "German",
+    "Spanish",
+    "Russian",
+    "Italian",
+    "Portuguese",
+    "Arabic",
+    NULL};
 
 static gboolean has_command(const gchar *name) {
   gchar *path = g_find_program_in_path(name);
@@ -54,9 +89,99 @@ static void set_output(AppState *state, const gchar *title, const gchar *body) {
   g_free(text);
 }
 
+static const gchar *current_target_language(AppState *state) {
+  if (state->target_combo == NULL) {
+    return g_getenv("LLM_TRANSLATE_TARGET") != NULL ? g_getenv("LLM_TRANSLATE_TARGET") : "Simplified Chinese";
+  }
+
+  gchar *active = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(state->target_combo));
+  if (active == NULL || active[0] == '\0') {
+    g_free(active);
+    return g_getenv("LLM_TRANSLATE_TARGET") != NULL ? g_getenv("LLM_TRANSLATE_TARGET") : "Simplified Chinese";
+  }
+
+  const gchar *interned = g_intern_string(active);
+  g_free(active);
+  return interned;
+}
+
+static const gchar *source_language_value(const gchar *display_name) {
+  if (display_name == NULL || g_ascii_strcasecmp(display_name, "Auto Detect") == 0) {
+    return "auto";
+  }
+  return display_name;
+}
+
+static const gchar *source_language_display(const gchar *value) {
+  if (value == NULL || g_ascii_strcasecmp(value, "auto") == 0) {
+    return "Auto Detect";
+  }
+  return value;
+}
+
+static const gchar *current_source_language(AppState *state) {
+  if (state->source_combo == NULL) {
+    return g_getenv("LLM_TRANSLATE_SOURCE") != NULL ? g_getenv("LLM_TRANSLATE_SOURCE") : "auto";
+  }
+
+  gchar *active = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(state->source_combo));
+  if (active == NULL || active[0] == '\0') {
+    g_free(active);
+    return g_getenv("LLM_TRANSLATE_SOURCE") != NULL ? g_getenv("LLM_TRANSLATE_SOURCE") : "auto";
+  }
+
+  const gchar *interned = g_intern_string(source_language_value(active));
+  g_free(active);
+  return interned;
+}
+
+static void configure_source_combo(AppState *state) {
+  const gchar *configured_source = g_getenv("LLM_TRANSLATE_SOURCE") != NULL
+      ? g_getenv("LLM_TRANSLATE_SOURCE")
+      : "auto";
+  const gchar *configured_display = source_language_display(configured_source);
+  gint active_index = -1;
+
+  for (gint i = 0; SOURCE_LANGUAGES[i] != NULL; i++) {
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(state->source_combo), SOURCE_LANGUAGES[i]);
+    if (g_ascii_strcasecmp(configured_display, SOURCE_LANGUAGES[i]) == 0) {
+      active_index = i;
+    }
+  }
+
+  if (active_index < 0 && configured_source[0] != '\0') {
+    gtk_combo_box_text_prepend_text(GTK_COMBO_BOX_TEXT(state->source_combo), configured_source);
+    active_index = 0;
+  }
+
+  gtk_combo_box_set_active(GTK_COMBO_BOX(state->source_combo), active_index >= 0 ? active_index : 0);
+}
+
+static void configure_target_combo(AppState *state) {
+  const gchar *configured_target = g_getenv("LLM_TRANSLATE_TARGET") != NULL
+      ? g_getenv("LLM_TRANSLATE_TARGET")
+      : "Simplified Chinese";
+  gint active_index = -1;
+
+  for (gint i = 0; TARGET_LANGUAGES[i] != NULL; i++) {
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(state->target_combo), TARGET_LANGUAGES[i]);
+    if (g_ascii_strcasecmp(configured_target, TARGET_LANGUAGES[i]) == 0) {
+      active_index = i;
+    }
+  }
+
+  if (active_index < 0 && configured_target[0] != '\0') {
+    gtk_combo_box_text_prepend_text(GTK_COMBO_BOX_TEXT(state->target_combo), configured_target);
+    active_index = 0;
+  }
+
+  gtk_combo_box_set_active(GTK_COMBO_BOX(state->target_combo), active_index >= 0 ? active_index : 0);
+}
+
 static gboolean run_subprocess(
     const gchar * const *argv,
     const gchar *stdin_text,
+    const gchar * const *envp,
     gchar **stdout_text,
     gchar **stderr_text,
     gint *exit_status,
@@ -66,7 +191,15 @@ static gboolean run_subprocess(
     flags |= G_SUBPROCESS_FLAGS_STDIN_PIPE;
   }
 
-  GSubprocess *process = g_subprocess_newv(argv, flags, error);
+  GSubprocess *process = NULL;
+  if (envp != NULL) {
+    GSubprocessLauncher *launcher = g_subprocess_launcher_new(flags);
+    g_subprocess_launcher_set_environ(launcher, envp);
+    process = g_subprocess_launcher_spawnv(launcher, argv, error);
+    g_object_unref(launcher);
+  } else {
+    process = g_subprocess_newv(argv, flags, error);
+  }
   if (process == NULL) {
     return FALSE;
   }
@@ -95,7 +228,7 @@ static gchar *read_command_output(const gchar * const *argv) {
   gint exit_status = 0;
   GError *error = NULL;
 
-  gboolean ok = run_subprocess(argv, NULL, &stdout_text, &stderr_text, &exit_status, &error);
+  gboolean ok = run_subprocess(argv, NULL, NULL, &stdout_text, &stderr_text, &exit_status, &error);
   g_clear_error(&error);
   g_free(stderr_text);
 
@@ -107,13 +240,18 @@ static gchar *read_command_output(const gchar * const *argv) {
   return stdout_text;
 }
 
+static gchar *run_cli_version(const gchar *cli_path) {
+  const gchar *argv[] = {cli_path, "--version", NULL};
+  return read_command_output(argv);
+}
+
 static gboolean write_command_input(const gchar * const *argv, const gchar *text) {
   gchar *stdout_text = NULL;
   gchar *stderr_text = NULL;
   gint exit_status = 0;
   GError *error = NULL;
 
-  gboolean ok = run_subprocess(argv, text, &stdout_text, &stderr_text, &exit_status, &error);
+  gboolean ok = run_subprocess(argv, text, NULL, &stdout_text, &stderr_text, &exit_status, &error);
   g_clear_error(&error);
   g_free(stdout_text);
   g_free(stderr_text);
@@ -372,13 +510,20 @@ static void apply_defaults(void) {
   }
 }
 
-static gchar *run_translation(const gchar *cli_path, const gchar *input, GError **error) {
-  const gchar *argv[] = {cli_path, NULL};
+static gchar *run_translation(const gchar *cli_path, const gchar *input, const gchar *source, const gchar *target, GError **error) {
+  const gchar *argv[] = {cli_path, "--source", source, "--target", target, NULL};
   gchar *stdout_text = NULL;
   gchar *stderr_text = NULL;
   gint exit_status = 0;
 
-  gboolean ok = run_subprocess(argv, input, &stdout_text, &stderr_text, &exit_status, error);
+  gboolean ok = run_subprocess(
+      argv,
+      input,
+      NULL,
+      &stdout_text,
+      &stderr_text,
+      &exit_status,
+      error);
   if (!ok) {
     if (error != NULL && *error == NULL) {
       g_set_error(
@@ -400,6 +545,8 @@ static gchar *run_translation(const gchar *cli_path, const gchar *input, GError 
 
 static void translate_job_free(TranslateJob *job) {
   g_free(job->input);
+  g_free(job->source);
+  g_free(job->target);
   g_free(job);
 }
 
@@ -409,7 +556,7 @@ static void translate_task_thread(GTask *task, gpointer source_object, gpointer 
 
   TranslateJob *job = task_data;
   GError *error = NULL;
-  gchar *translated = run_translation(job->state->cli_path, job->input, &error);
+  gchar *translated = run_translation(job->state->cli_path, job->input, job->source, job->target, &error);
   if (translated == NULL) {
     g_task_return_error(task, error);
     return;
@@ -446,9 +593,16 @@ static void start_translation(AppState *state, const gchar *input) {
   TranslateJob *job = g_new0(TranslateJob, 1);
   job->state = state;
   job->input = g_strdup(input);
+  job->source = g_strdup(current_source_language(state));
+  job->target = g_strdup(current_target_language(state));
 
   set_status(state, "Translating...");
-  set_output(state, "Translating", "Waiting for provider response...");
+  gchar *message = g_strdup_printf(
+      "Source: %s\nTarget: %s\nWaiting for provider response...",
+      source_language_display(job->source),
+      job->target);
+  set_output(state, "Translating", message);
+  g_free(message);
 
   GTask *task = g_task_new(NULL, NULL, on_translate_done, state);
   g_task_set_task_data(task, job, (GDestroyNotify)translate_job_free);
@@ -524,6 +678,27 @@ static void on_test_translation(GtkButton *button, gpointer user_data) {
   start_translation(state, "Hello, world!");
 }
 
+static void on_version(GtkButton *button, gpointer user_data) {
+  (void)button;
+  AppState *state = user_data;
+  gchar *cli_version = run_cli_version(state->cli_path);
+
+  if (cli_version == NULL) {
+    set_status(state, "Version unavailable");
+    set_output(state, "Version Failed", "Could not read llm-translate --version.");
+    return;
+  }
+
+  gchar *body = g_strdup_printf(
+      "LLMTranslateLinux: dev\n"
+      "llm-translate CLI: %s",
+      cli_version);
+  set_status(state, "Version");
+  set_output(state, "Version", body);
+  g_free(body);
+  g_free(cli_version);
+}
+
 static gboolean run_startup_action(gpointer user_data) {
   AppState *state = user_data;
 
@@ -575,7 +750,10 @@ static void on_diagnostics(GtkButton *button, gpointer user_data) {
       "CLI: %s\n"
       "Provider: %s\n"
       "Model: %s\n"
+      "Source: %s\n"
+      "GUI source: %s\n"
       "Target: %s\n"
+      "GUI target: %s\n"
       "Config: %s exists: %s\n"
       "Session: XDG_SESSION_TYPE=%s DISPLAY=%s WAYLAND_DISPLAY=%s\n\n"
       "Helpers:\n"
@@ -585,7 +763,10 @@ static void on_diagnostics(GtkButton *button, gpointer user_data) {
       state->cli_path,
       g_getenv("LLM_TRANSLATE_PROVIDER") != NULL ? g_getenv("LLM_TRANSLATE_PROVIDER") : "(unset)",
       g_getenv("LLM_TRANSLATE_MODEL") != NULL ? g_getenv("LLM_TRANSLATE_MODEL") : "(provider default)",
+      g_getenv("LLM_TRANSLATE_SOURCE") != NULL ? g_getenv("LLM_TRANSLATE_SOURCE") : "(unset)",
+      current_source_language(state),
       g_getenv("LLM_TRANSLATE_TARGET") != NULL ? g_getenv("LLM_TRANSLATE_TARGET") : "(unset)",
+      current_target_language(state),
       config_path,
       g_file_test(config_path, G_FILE_TEST_EXISTS) ? "yes" : "no",
       g_getenv("XDG_SESSION_TYPE") != NULL ? g_getenv("XDG_SESSION_TYPE") : "(unset)",
@@ -625,7 +806,23 @@ static void activate(GtkApplication *application, gpointer user_data) {
   gtk_box_pack_start(GTK_BOX(toolbar), make_button("Translate Clipboard", G_CALLBACK(on_translate_clipboard), state), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(toolbar), make_button("Speak Selection", G_CALLBACK(on_speak_selection), state), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(toolbar), make_button("Test", G_CALLBACK(on_test_translation), state), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(toolbar), make_button("Version", G_CALLBACK(on_version), state), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(toolbar), make_button("Diagnostics", G_CALLBACK(on_diagnostics), state), FALSE, FALSE, 0);
+
+  GtkWidget *language_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  gtk_box_pack_start(GTK_BOX(box), language_box, FALSE, FALSE, 0);
+  GtkWidget *source_label = gtk_label_new("Source");
+  gtk_label_set_xalign(GTK_LABEL(source_label), 0.0);
+  gtk_box_pack_start(GTK_BOX(language_box), source_label, FALSE, FALSE, 0);
+  state->source_combo = gtk_combo_box_text_new();
+  configure_source_combo(state);
+  gtk_box_pack_start(GTK_BOX(language_box), state->source_combo, FALSE, FALSE, 0);
+  GtkWidget *target_label = gtk_label_new("Target");
+  gtk_label_set_xalign(GTK_LABEL(target_label), 0.0);
+  gtk_box_pack_start(GTK_BOX(language_box), target_label, FALSE, FALSE, 0);
+  state->target_combo = gtk_combo_box_text_new();
+  configure_target_combo(state);
+  gtk_box_pack_start(GTK_BOX(language_box), state->target_combo, FALSE, FALSE, 0);
 
   GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);

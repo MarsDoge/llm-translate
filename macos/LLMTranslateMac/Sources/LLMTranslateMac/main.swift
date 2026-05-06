@@ -122,16 +122,25 @@ private final class Translator {
     self.cliPath = cliPath
   }
 
-  func translate(_ text: String, completion: @escaping (Result<String, Error>) -> Void) {
+  func translate(_ text: String, source: String, target: String, completion: @escaping (Result<String, Error>) -> Void) {
     DispatchQueue.global(qos: .userInitiated).async {
-      let result = Result { try self.runTranslation(text) }
+      let result = Result { try self.runTranslation(text, source: source, target: target) }
       DispatchQueue.main.async {
         completion(result)
       }
     }
   }
 
-  var diagnostics: String {
+  func version(completion: @escaping (Result<String, Error>) -> Void) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      let result = Result { try self.runVersion() }
+      DispatchQueue.main.async {
+        completion(result)
+      }
+    }
+  }
+
+  func diagnostics(source: String, target: String) -> String {
     var environment = ProcessInfo.processInfo.environment
     loadConfigFile(into: &environment)
     ensureHomebrewPath(in: &environment)
@@ -139,7 +148,8 @@ private final class Translator {
 
     let provider = environment["LLM_TRANSLATE_PROVIDER"] ?? "(unset)"
     let model = environment["LLM_TRANSLATE_MODEL"] ?? "(provider default)"
-    let target = environment["LLM_TRANSLATE_TARGET"] ?? "(unset)"
+    let configuredSource = environment["LLM_TRANSLATE_SOURCE"] ?? "(unset)"
+    let configuredTarget = environment["LLM_TRANSLATE_TARGET"] ?? "(unset)"
     let configPath = FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/llm-translate/env").path
     let configExists = FileManager.default.fileExists(atPath: configPath) ? "yes" : "no"
@@ -148,16 +158,19 @@ private final class Translator {
     CLI: \(cliPath)
     Provider: \(provider)
     Model: \(model)
-    Target: \(target)
+    Config Source: \(configuredSource)
+    App Source: \(source)
+    Config Target: \(configuredTarget)
+    App Target: \(target)
     Config: \(configPath) exists: \(configExists)
     PATH: \(environment["PATH"] ?? "")
     """
   }
 
-  private func runTranslation(_ text: String) throws -> String {
+  private func runTranslation(_ text: String, source: String, target: String) throws -> String {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/bash")
-    process.arguments = [cliPath]
+    process.arguments = [cliPath, "--source", source, "--target", target]
 
     var environment = ProcessInfo.processInfo.environment
     loadConfigFile(into: &environment)
@@ -189,7 +202,45 @@ private final class Translator {
     throw AppFailure.commandFailed("""
     CLI failed with exit code \(process.terminationStatus).
 
-    \(diagnostics)
+    \(diagnostics(source: source, target: target))
+
+    stderr:
+    \(stderr.isEmpty ? "(empty)" : stderr)
+
+    stdout:
+    \(stdout.isEmpty ? "(empty)" : stdout)
+    """)
+  }
+
+  private func runVersion() throws -> String {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/bin/bash")
+    process.arguments = [cliPath, "--version"]
+
+    var environment = ProcessInfo.processInfo.environment
+    loadConfigFile(into: &environment)
+    ensureHomebrewPath(in: &environment)
+    applyDefaults(to: &environment)
+    process.environment = environment
+
+    let output = Pipe()
+    let error = Pipe()
+    process.standardOutput = output
+    process.standardError = error
+
+    try process.run()
+    let outputData = output.fileHandleForReading.readDataToEndOfFile()
+    let errorData = error.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+
+    let stdout = String(data: outputData, encoding: .utf8) ?? ""
+    if process.terminationStatus == 0 {
+      return stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    let stderr = String(data: errorData, encoding: .utf8) ?? ""
+    throw AppFailure.commandFailed("""
+    CLI --version failed with exit code \(process.terminationStatus).
 
     stderr:
     \(stderr.isEmpty ? "(empty)" : stderr)
@@ -382,11 +433,49 @@ private final class HotKeyManager {
 }
 
 private final class AppDelegate: NSObject, NSApplicationDelegate {
+  private struct LanguageOption {
+    let title: String
+    let value: String
+  }
+
+  private let sourceLanguages = [
+    LanguageOption(title: "Auto Detect", value: "auto"),
+    LanguageOption(title: "Simplified Chinese", value: "Simplified Chinese"),
+    LanguageOption(title: "Traditional Chinese", value: "Traditional Chinese"),
+    LanguageOption(title: "English", value: "English"),
+    LanguageOption(title: "Japanese", value: "Japanese"),
+    LanguageOption(title: "Korean", value: "Korean"),
+    LanguageOption(title: "French", value: "French"),
+    LanguageOption(title: "German", value: "German"),
+    LanguageOption(title: "Spanish", value: "Spanish"),
+    LanguageOption(title: "Russian", value: "Russian"),
+    LanguageOption(title: "Italian", value: "Italian"),
+    LanguageOption(title: "Portuguese", value: "Portuguese"),
+    LanguageOption(title: "Arabic", value: "Arabic")
+  ]
+  private let targetLanguages = [
+    "Simplified Chinese",
+    "Traditional Chinese",
+    "English",
+    "Japanese",
+    "Korean",
+    "French",
+    "German",
+    "Spanish",
+    "Russian",
+    "Italian",
+    "Portuguese",
+    "Arabic"
+  ]
   private let selectedTextReader = SelectedTextReader()
   private let translator: Translator
   private let speechSynthesizer = NSSpeechSynthesizer()
   private let hotKeyManager = HotKeyManager()
   private var statusItem: NSStatusItem?
+  private var sourceMenuItems: [NSMenuItem] = []
+  private var targetMenuItems: [NSMenuItem] = []
+  private var selectedSourceLanguage: String
+  private var selectedTargetLanguage: String
   private var panel: NSPanel?
   private var textView: NSTextView?
   private let panelFont = NSFont.systemFont(ofSize: 14)
@@ -398,6 +487,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       NSAlert(error: error).runModal()
       exit(1)
     }
+    selectedSourceLanguage = AppDelegate.defaultLanguageValue(environmentKey: "LLM_TRANSLATE_SOURCE", fallback: "auto")
+    selectedTargetLanguage = AppDelegate.defaultTargetLanguage()
     super.init()
   }
 
@@ -420,9 +511,13 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     let menu = NSMenu()
     addMenuItem(to: menu, title: "Show Help", action: #selector(showHelp))
     menu.addItem(NSMenuItem.separator())
+    addSourceLanguageMenu(to: menu)
+    addTargetLanguageMenu(to: menu)
+    menu.addItem(NSMenuItem.separator())
     addMenuItem(to: menu, title: "Translate Selection", action: #selector(translateSelection))
     addMenuItem(to: menu, title: "Speak Selection", action: #selector(speakSelection))
     addMenuItem(to: menu, title: "Test Translation", action: #selector(testTranslation))
+    addMenuItem(to: menu, title: "Show Version", action: #selector(showVersion))
     addMenuItem(to: menu, title: "Show Diagnostics", action: #selector(showDiagnostics))
     menu.addItem(NSMenuItem.separator())
     let shortcutItem = NSMenuItem(title: "Shortcuts: ⌥⌘T translate, ⌥⌘S speak", action: nil, keyEquivalent: "")
@@ -443,6 +538,117 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     menu.addItem(item)
   }
 
+  private func addTargetLanguageMenu(to menu: NSMenu) {
+    let item = NSMenuItem(title: "Target Language", action: nil, keyEquivalent: "")
+    let submenu = NSMenu()
+    targetMenuItems = []
+
+    var languages = targetLanguages
+    if !languages.contains(selectedTargetLanguage) {
+      languages.insert(selectedTargetLanguage, at: 0)
+    }
+
+    for language in languages {
+      let languageItem = NSMenuItem(title: language, action: #selector(selectTargetLanguage(_:)), keyEquivalent: "")
+      languageItem.target = self
+      languageItem.representedObject = language
+      submenu.addItem(languageItem)
+      targetMenuItems.append(languageItem)
+    }
+
+    item.submenu = submenu
+    menu.addItem(item)
+    updateTargetMenuState()
+  }
+
+  private func addSourceLanguageMenu(to menu: NSMenu) {
+    let item = NSMenuItem(title: "Source Language", action: nil, keyEquivalent: "")
+    let submenu = NSMenu()
+    sourceMenuItems = []
+
+    var languages = sourceLanguages
+    if !languages.contains(where: { $0.value == selectedSourceLanguage }) {
+      languages.insert(LanguageOption(title: selectedSourceLanguage, value: selectedSourceLanguage), at: 0)
+    }
+
+    for language in languages {
+      let languageItem = NSMenuItem(title: language.title, action: #selector(selectSourceLanguage(_:)), keyEquivalent: "")
+      languageItem.target = self
+      languageItem.representedObject = language.value
+      submenu.addItem(languageItem)
+      sourceMenuItems.append(languageItem)
+    }
+
+    item.submenu = submenu
+    menu.addItem(item)
+    updateSourceMenuState()
+  }
+
+  @objc private func selectSourceLanguage(_ sender: NSMenuItem) {
+    guard let language = sender.representedObject as? String else {
+      return
+    }
+    selectedSourceLanguage = language
+    updateSourceMenuState()
+    showPanel(title: "Source Language", body: "Source: \(sourceDisplayName(selectedSourceLanguage))")
+  }
+
+  @objc private func selectTargetLanguage(_ sender: NSMenuItem) {
+    guard let language = sender.representedObject as? String else {
+      return
+    }
+    selectedTargetLanguage = language
+    updateTargetMenuState()
+    showPanel(title: "Target Language", body: "Target: \(selectedTargetLanguage)")
+  }
+
+  private func updateTargetMenuState() {
+    for item in targetMenuItems {
+      item.state = item.title == selectedTargetLanguage ? .on : .off
+    }
+  }
+
+  private func updateSourceMenuState() {
+    for item in sourceMenuItems {
+      item.state = (item.representedObject as? String) == selectedSourceLanguage ? .on : .off
+    }
+  }
+
+  private func sourceDisplayName(_ value: String) -> String {
+    sourceLanguages.first(where: { $0.value == value })?.title ?? value
+  }
+
+  private static func defaultTargetLanguage() -> String {
+    defaultLanguageValue(environmentKey: "LLM_TRANSLATE_TARGET", fallback: "Simplified Chinese")
+  }
+
+  private static func defaultLanguageValue(environmentKey: String, fallback: String) -> String {
+    var environment = ProcessInfo.processInfo.environment
+    let configURL = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".config/llm-translate/env")
+
+    if let contents = try? String(contentsOf: configURL, encoding: .utf8) {
+      for rawLine in contents.split(separator: "\n", omittingEmptySubsequences: false) {
+        let line = rawLine.trimmingCharacters(in: .whitespaces)
+        guard !line.isEmpty, !line.hasPrefix("#"), let separator = line.firstIndex(of: "=") else {
+          continue
+        }
+
+        let key = line[..<separator].trimmingCharacters(in: .whitespaces)
+        var value = line[line.index(after: separator)...].trimmingCharacters(in: .whitespaces)
+        if (value.hasPrefix("\"") && value.hasSuffix("\"")) || (value.hasPrefix("'") && value.hasSuffix("'")) {
+          value.removeFirst()
+          value.removeLast()
+        }
+        if !key.isEmpty && environment[String(key)] == nil {
+          environment[String(key)] = String(value)
+        }
+      }
+    }
+
+    return environment[environmentKey] ?? fallback
+  }
+
   @objc private func showHelp() {
     showPanel(
       title: "LLMTranslateMac",
@@ -454,6 +660,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
       Option + Command + T  Translate selection
       Option + Command + S  Speak selection
 
+      Source language: \(sourceDisplayName(selectedSourceLanguage))
+      Target language: \(selectedTargetLanguage)
+
       You can also click the menu bar item named "译".
 
       Use "Test Translation" from the menu to verify provider configuration without selecting text.
@@ -461,10 +670,29 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     )
   }
 
+  @objc private func showVersion() {
+    translator.version { [weak self] result in
+      switch result {
+      case .success(let cliVersion):
+        self?.showPanel(
+          title: "Version",
+          body: """
+          LLMTranslateMac: \(Self.appVersion)
+          llm-translate CLI: \(cliVersion)
+          """
+        )
+      case .failure(let error):
+        let message = describe(error)
+        AppLog.write("Show Version failed:\n\(message)")
+        self?.showPanel(title: "Version Failed", body: message)
+      }
+    }
+  }
+
   @objc private func testTranslation() {
-    AppLog.write("Test Translation started\n\(translator.diagnostics)")
-    showPanel(title: "Translating", body: "Translating test text...")
-    translator.translate("Hello, world!") { [weak self] result in
+    AppLog.write("Test Translation started\n\(translator.diagnostics(source: selectedSourceLanguage, target: selectedTargetLanguage))")
+    showPanel(title: "Translating", body: "Source: \(sourceDisplayName(selectedSourceLanguage))\nTarget: \(selectedTargetLanguage)\nTranslating test text...")
+    translator.translate("Hello, world!", source: selectedSourceLanguage, target: selectedTargetLanguage) { [weak self] result in
       switch result {
       case .success(let translated):
         AppLog.write("Test Translation succeeded: \(translated)")
@@ -478,7 +706,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   @objc private func showDiagnostics() {
-    let diagnostics = translator.diagnostics
+    let diagnostics = translator.diagnostics(source: selectedSourceLanguage, target: selectedTargetLanguage)
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(diagnostics, forType: .string)
     AppLog.write("Diagnostics requested\n\(diagnostics)")
@@ -496,8 +724,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
   @objc private func translateSelection() {
     do {
       let text = try selectedTextReader.readSelectedText()
-      showPanel(title: "Translating", body: "Translating...")
-      translator.translate(text) { [weak self] result in
+      showPanel(title: "Translating", body: "Source: \(sourceDisplayName(selectedSourceLanguage))\nTarget: \(selectedTargetLanguage)\nTranslating...")
+      translator.translate(text, source: selectedSourceLanguage, target: selectedTargetLanguage) { [weak self] result in
         switch result {
         case .success(let translated):
           self?.showPanel(title: "Translation", body: translated)
@@ -596,6 +824,21 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
     self.textView = textView
     return panel
+  }
+
+  private static var appVersion: String {
+    let info = Bundle.main.infoDictionary
+    let shortVersion = info?["CFBundleShortVersionString"] as? String
+    let build = info?["CFBundleVersion"] as? String
+
+    switch (shortVersion, build) {
+    case let (version?, build?) where !version.isEmpty && !build.isEmpty:
+      return "\(version) (\(build))"
+    case let (version?, _) where !version.isEmpty:
+      return version
+    default:
+      return "dev"
+    }
   }
 }
 

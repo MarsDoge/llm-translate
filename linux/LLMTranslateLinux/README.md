@@ -8,8 +8,11 @@ A Linux GTK app for translating or speaking selected text on the desktop. It onl
 
 - `Translate Selection`: read the current selection and translate it.
 - `Translate Clipboard`: read the clipboard and translate it; this is the most reliable path on Wayland.
+- Source language dropdown: keep source auto-detection or specify it manually for non-LLM providers such as MyMemory.
+- Target language dropdown: temporarily switch the GUI translation target without editing config files.
 - `Speak Selection`: read the current selection and call local TTS.
 - `Test`: translate `Hello, world!` to verify provider configuration.
+- `Version`: show the Linux GUI and underlying CLI versions.
 - `Diagnostics`: show CLI, provider, and desktop helper availability.
 
 ## Build
@@ -62,6 +65,28 @@ sudo apt install speech-dispatcher
 ```
 
 If your Wayland compositor blocks synthetic key events, copy the text first and use `Translate Clipboard`.
+
+## Target Language
+
+The GUI uses `LLM_TRANSLATE_SOURCE` as the default source and falls back to `Auto Detect`.
+LLM providers can usually stay on auto-detect; MyMemory-style providers should set the source language when translating from non-English text.
+
+The GUI uses `LLM_TRANSLATE_TARGET` as the default target and exposes a common target-language dropdown:
+
+- Simplified Chinese
+- Traditional Chinese
+- English
+- Japanese
+- Korean
+- French
+- German
+- Spanish
+- Russian
+- Italian
+- Portuguese
+- Arabic
+
+The dropdown affects translation calls from the current GUI process only. It does not write back to `~/.config/llm-translate/env`.
 
 ## Provider Config
 

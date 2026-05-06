@@ -33,10 +33,10 @@
 - **管道友好的 CLI** —— 从 stdin 读、写到 stdout，任何东西都能管道进去。
 - **Vim 插件** —— `<leader>t` / `<leader>o` / `<leader>b` 分别触发 translate /
   optimize / bugfix；代码类任务会在新 tab 里打开左右对比 diff。
-- **macOS 菜单栏 app** —— 对选中文字调用 CLI 翻译，或用系统
-  `NSSpeechSynthesizer` 发音。
+- **macOS 菜单栏 app** —— 对选中文字调用 CLI 翻译，支持源/目标语言菜单切换、
+  版本查询，或用系统 `NSSpeechSynthesizer` 发音。
 - **Linux GTK 图形应用** —— 在 X11 / Wayland 下翻译选区或剪贴板内容，
-  并支持本机 TTS 兜底。
+  支持源/目标语言下拉切换、版本查询，并支持本机 TTS 兜底。
 - **保留格式的 prompt** —— 代码块、路径、标识符、markdown 原样保留。
 - **零配置兜底** —— 没配任何 API key 时用 `-p mymemory` 依然能翻译。
 

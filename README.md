@@ -35,10 +35,11 @@ see [docs/architecture.md](./docs/architecture.md). Refresh it with
 - **Streaming-friendly CLI** — reads from stdin, writes to stdout. Pipe anything.
 - **Vim plugin** — `<leader>t` / `<leader>o` / `<leader>b` run translate / optimize
   / bugfix on the visual selection. Code tasks open a two-pane diff in a fresh tab.
-- **macOS menu-bar app** — translate selected text with the CLI or speak it with
-  the system `NSSpeechSynthesizer`.
+- **macOS menu-bar app** — translate selected text with the CLI, switch source
+  and target language from the menu, query versions, or speak it with the system
+  `NSSpeechSynthesizer`.
 - **Linux GTK app** — translate selected text or clipboard contents under X11
-  or Wayland, with local TTS fallback.
+  or Wayland, with source/target language dropdowns, version query, and local TTS fallback.
 - **Format-preserving prompt** — code blocks, paths, identifiers, and markdown are kept intact.
 
 ## Install
