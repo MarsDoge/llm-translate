@@ -181,7 +181,7 @@ static void configure_target_combo(AppState *state) {
 static gboolean run_subprocess(
     const gchar * const *argv,
     const gchar *stdin_text,
-    const gchar * const *envp,
+    gchar **envp,
     gchar **stdout_text,
     gchar **stderr_text,
     gint *exit_status,
@@ -874,7 +874,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  GtkApplication *application = gtk_application_new("io.github.MarsDoge.LLMTranslateLinux", G_APPLICATION_FLAGS_NONE);
+#if GLIB_CHECK_VERSION(2, 74, 0)
+  GApplicationFlags application_flags = G_APPLICATION_DEFAULT_FLAGS;
+#else
+  GApplicationFlags application_flags = G_APPLICATION_FLAGS_NONE;
+#endif
+  GtkApplication *application = gtk_application_new("io.github.MarsDoge.LLMTranslateLinux", application_flags);
   const GOptionEntry options[] = {
       {"translate-selection", 0, 0, G_OPTION_ARG_NONE, NULL, "Translate the current selection after opening", NULL},
       {"translate-clipboard", 0, 0, G_OPTION_ARG_NONE, NULL, "Translate the clipboard after opening", NULL},
