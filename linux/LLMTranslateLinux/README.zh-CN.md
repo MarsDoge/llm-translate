@@ -8,8 +8,11 @@
 
 - `Translate Selection`：读取当前选区并翻译。
 - `Translate Clipboard`：读取剪贴板并翻译，Wayland 下最稳。
+- 源语言下拉框：默认自动识别，也可手动指定给 MyMemory 等非 LLM provider。
+- 目标语言下拉框：临时切换本次 GUI 翻译目标，不改配置文件。
 - `Speak Selection`：读取当前选区并调用本机 TTS。
 - `Test`：翻译 `Hello, world!`，用于验证 provider 配置。
+- `Version`：显示 Linux GUI 和底层 CLI 版本。
 - `Diagnostics`：显示 CLI、provider、桌面 helper 可用性。
 
 ## 构建
@@ -60,6 +63,28 @@ sudo apt install speech-dispatcher
 ```
 
 如果 Wayland compositor 禁止模拟按键，先复制文本，再点 `Translate Clipboard`。
+
+## 目标语言
+
+GUI 会读取 `LLM_TRANSLATE_SOURCE` 作为默认源语言，未设置时使用 `Auto Detect`。
+LLM provider 通常保持自动识别即可；MyMemory 这类 provider 翻译非英文源文时建议手动指定源语言。
+
+GUI 会读取 `LLM_TRANSLATE_TARGET` 作为默认目标语言，并在窗口里提供常用目标语言下拉框：
+
+- Simplified Chinese
+- Traditional Chinese
+- English
+- Japanese
+- Korean
+- French
+- German
+- Spanish
+- Russian
+- Italian
+- Portuguese
+- Arabic
+
+下拉框只影响当前 GUI 进程里的翻译调用，不会写入 `~/.config/llm-translate/env`。
 
 ## Provider 配置
 

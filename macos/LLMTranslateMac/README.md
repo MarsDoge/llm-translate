@@ -8,6 +8,9 @@ It reuses the repository CLI (`bin/llm-translate`) instead of duplicating provid
 
 - `Option + Command + T`: copy the current selection, translate it, and show the result in a floating panel.
 - `Option + Command + S`: copy the current selection and speak it with macOS speech synthesis.
+- `Source Language` menu: keep source auto-detection or specify it manually for non-LLM providers such as MyMemory.
+- `Target Language` menu: temporarily switch the app translation target without editing config files.
+- `Show Version`: show the macOS app and underlying CLI versions.
 
 The app restores the previous clipboard contents after reading the selection.
 
@@ -82,3 +85,25 @@ If the app cannot find the repository CLI, set:
 ```bash
 export LLM_TRANSLATE_CLI=/absolute/path/to/bin/llm-translate
 ```
+
+## Target Language
+
+The menu-bar `Source Language` menu uses `LLM_TRANSLATE_SOURCE` as the default and falls back to `Auto Detect`.
+LLM providers can usually stay on auto-detect; MyMemory-style providers should set the source language when translating from non-English text.
+
+`Target Language` uses `LLM_TRANSLATE_TARGET` as the default and provides common languages:
+
+- Simplified Chinese
+- Traditional Chinese
+- English
+- Japanese
+- Korean
+- French
+- German
+- Spanish
+- Russian
+- Italian
+- Portuguese
+- Arabic
+
+The menu selection affects translation calls from the current app process only. It does not write back to `~/.config/llm-translate/env`.

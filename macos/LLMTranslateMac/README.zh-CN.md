@@ -8,6 +8,9 @@
 
 - `Option + Command + T`：复制当前选区，调用 CLI 翻译，并在浮动窗口里显示结果。
 - `Option + Command + S`：复制当前选区，并用 macOS 自带语音合成读出来。
+- `Source Language` 菜单：源语言默认自动识别，也可手动指定给 MyMemory 等非 LLM provider。
+- `Target Language` 菜单：临时切换本次 app 翻译目标，不改配置文件。
+- `Show Version`：显示 macOS app 和底层 CLI 版本。
 
 读取选区后，app 会恢复之前的剪贴板内容。
 
@@ -82,3 +85,25 @@ LLM_TRANSLATE_TARGET=Simplified Chinese
 ```bash
 export LLM_TRANSLATE_CLI=/absolute/path/to/bin/llm-translate
 ```
+
+## 目标语言
+
+菜单栏里的 `Source Language` 会读取 `LLM_TRANSLATE_SOURCE` 作为默认值，默认为 `Auto Detect`。
+LLM provider 通常保持自动识别即可；MyMemory 这类 provider 翻译非英文源文时建议手动指定源语言。
+
+`Target Language` 会读取 `LLM_TRANSLATE_TARGET` 作为默认值，并提供常用语言：
+
+- Simplified Chinese
+- Traditional Chinese
+- English
+- Japanese
+- Korean
+- French
+- German
+- Spanish
+- Russian
+- Italian
+- Portuguese
+- Arabic
+
+菜单选择只影响当前 app 进程里的翻译调用，不会写入 `~/.config/llm-translate/env`。
