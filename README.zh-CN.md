@@ -2,6 +2,8 @@
 
 [English](./README.md) · 简体中文
 
+![llm-translate 项目概览](./docs/assets/llm-translate-overview.svg)
+
 一个给终端、Vim、macOS 和 Linux 图形桌面用的轻量工具，底层由大语言模型驱动。单一 CLI、三个任务 ——
 **translate**（翻译文本）、**optimize**（优化代码）、**bugfix**（修常见 bug） ——
 可切换的 provider（**DeepSeek**、**OpenAI**、**Anthropic Claude**、本地

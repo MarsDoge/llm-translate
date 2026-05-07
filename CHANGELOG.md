@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-07
+
 ### 新增
 
 - **一键安装脚本 `install.sh`**（[#1](https://github.com/MarsDoge/llm-translate/issues/1)）：
@@ -35,6 +37,27 @@
   用 `:diffget`/`:diffput` 按行拣选，`:tabclose` 一键丢弃。
 - **`LLM_TRANSLATE_TASK` 环境变量** 可设置默认任务；Vim 端新增
   `g:llm_translate_map_optimize` 和 `g:llm_translate_map_bugfix` 开关。
+- **OpenAI-compatible provider 层**：新增 `aliyun-codingplan`、`doubao`、
+  `grok`、`kimi`、`mistral`、`qwen`、`zhipu` 等 provider，复用统一的
+  OpenAI 兼容请求封装。
+- **流式输出**：CLI 新增 `--stream` / `--no-stream`，支持 DeepSeek、OpenAI、
+  Claude、Ollama 以及 OpenAI-compatible providers 的增量输出。
+- **mindmap 任务**：新增 `--task mindmap`，可生成 Mermaid flowchart 或
+  GraphViz DOT，用于围绕目标符号梳理调用关系。
+- **macOS 菜单栏应用**：新增 Swift/AppKit 桌面应用，可翻译选中文本、切换
+  source/target、朗读文本并查询底层 CLI 版本。
+- **Linux GTK 图形应用**：新增 Linux 桌面 GUI、选区/剪贴板翻译、本地 TTS
+  兜底、版本查询，以及 `Super+Alt+T` / `Super+Alt+S` 快捷键安装。
+- **桌面语言控制**：macOS 与 Linux GUI 都支持 source/target 语言下拉或菜单
+  切换；LLM provider 可保持 source 为 auto，目标语言显式传给 CLI。
+- **架构与项目图**：README 新增 SVG 项目概览图，并补充英文/中文架构文档。
+
+### 修复
+
+- 修复 macOS 菜单栏应用翻译流程稳定性问题。
+- 修复 Linux GTK app 在新版 GLib 头文件下的编译错误：
+  `g_subprocess_launcher_set_environ()` 的 `envp` 参数类型与 GLib API 对齐，并
+  兼容 GLib 2.74+ 的 `G_APPLICATION_DEFAULT_FLAGS`。
 
 ## [0.1.0] — 2026-04-15
 
@@ -90,5 +113,6 @@
 - 禁用 `curl --fail-with-body`（兼容性问题）。
 - 构造 JSON 请求体一律用 `jq --arg` / `--argjson`，不要字符串拼接。
 
-[Unreleased]: https://github.com/MarsDoge/llm-translate/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MarsDoge/llm-translate/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/MarsDoge/llm-translate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/MarsDoge/llm-translate/releases/tag/v0.1.0

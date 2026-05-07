@@ -3,7 +3,7 @@
 # https://github.com/MarsDoge/llm-translate
 set -euo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 
 resolve_script_path() {
   local target="$1" dir link

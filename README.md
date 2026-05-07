@@ -2,6 +2,8 @@
 
 English · [简体中文](./README.zh-CN.md)
 
+![llm-translate project overview](./docs/assets/llm-translate-overview.svg)
+
 A tiny, dependency-light tool for the terminal, Vim, macOS, and Linux desktops, backed by large
 language models. One CLI, three tasks — **translate** text, **optimize**
 code, or **bugfix** a snippet — with swappable providers (**DeepSeek**,

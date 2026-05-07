@@ -1,0 +1,310 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="945" viewBox="0 0 1680 945" role="img" aria-labelledby="title desc">
+  <title id="title">llm-translate project overview</title>
+  <desc id="desc">A vector project overview showing llm-translate entrypoints, desktop apps, translation core, providers, controls, multilingual output, and project highlights.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#03080c"/>
+      <stop offset="0.52" stop-color="#071216"/>
+      <stop offset="1" stop-color="#02060a"/>
+    </linearGradient>
+    <linearGradient id="cyanText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#59e9ff"/>
+      <stop offset="1" stop-color="#24c5df"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e1a22"/>
+      <stop offset="1" stop-color="#071016"/>
+    </linearGradient>
+    <linearGradient id="terminal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111920"/>
+      <stop offset="1" stop-color="#03080d"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#80f77b"/>
+      <stop offset="1" stop-color="#25b95e"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7bd9ff"/>
+      <stop offset="1" stop-color="#2099ff"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd76d"/>
+      <stop offset="1" stop-color="#f3a72a"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.48"/>
+    </filter>
+    <marker id="arrowCyan" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M1 1 L10 5.5 L1 10 Z" fill="#48eaff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M1 1 L10 5.5 L1 10 Z" fill="#73f173"/>
+    </marker>
+    <marker id="arrowGold" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M1 1 L10 5.5 L1 10 Z" fill="#ffd45f"/>
+    </marker>
+    <style>
+      .title { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 68px; font-weight: 900; fill: #f8fafc; letter-spacing: 0; }
+      .titleAccent { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 68px; font-weight: 900; fill: #45e7ff; letter-spacing: 0; }
+      .subtitle { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 29px; font-weight: 700; fill: #c2cbd5; letter-spacing: 0; }
+      .section { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 24px; font-weight: 800; fill: #51e7ff; letter-spacing: 0; }
+      .sectionGreen { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 22px; font-weight: 800; fill: #8ff071; letter-spacing: 0; }
+      .sectionGold { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 24px; font-weight: 800; fill: #ffd05e; letter-spacing: 0; }
+      .label { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 800; fill: #edf7fb; letter-spacing: 0; }
+      .text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 16px; font-weight: 600; fill: #c9d4df; letter-spacing: 0; }
+      .small { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; fill: #98aab8; letter-spacing: 0; }
+      .tiny { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; fill: #8fa2ae; letter-spacing: 0; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 16px; font-weight: 700; fill: #d9f7df; letter-spacing: 0; }
+      .panel { fill: url(#panel); stroke: #24596a; stroke-width: 1.5; }
+      .panelGreen { fill: url(#panel); stroke: #6ba35b; stroke-width: 1.5; }
+      .panelGold { fill: url(#panel); stroke: #a7792e; stroke-width: 1.5; }
+      .card { fill: #081218; stroke: #243c4a; stroke-width: 1.2; }
+      .lineCyan { stroke: #48eaff; stroke-width: 3; fill: none; marker-end: url(#arrowCyan); filter: url(#glow); }
+      .lineGreen { stroke: #73f173; stroke-width: 3; fill: none; marker-end: url(#arrowGreen); filter: url(#glow); }
+      .lineGold { stroke: #ffd45f; stroke-width: 3; fill: none; marker-end: url(#arrowGold); filter: url(#glow); }
+      .dashCyan { stroke: #48eaff; stroke-width: 2; fill: none; stroke-dasharray: 7 8; marker-end: url(#arrowCyan); opacity: 0.9; }
+      .dashGreen { stroke: #73f173; stroke-width: 2; fill: none; stroke-dasharray: 7 8; marker-end: url(#arrowGreen); opacity: 0.9; }
+      .dashGold { stroke: #ffd45f; stroke-width: 2; fill: none; stroke-dasharray: 7 8; marker-end: url(#arrowGold); opacity: 0.9; }
+      .divider { stroke: #25434c; stroke-width: 1; opacity: 0.9; }
+    </style>
+  </defs>
+
+  <rect width="1680" height="945" fill="url(#bg)"/>
+  <g opacity="0.35">
+    <circle cx="39" cy="34" r="2" fill="#48606c"/><circle cx="58" cy="34" r="2" fill="#48606c"/><circle cx="77" cy="34" r="2" fill="#48606c"/><circle cx="96" cy="34" r="2" fill="#48606c"/>
+    <circle cx="39" cy="51" r="2" fill="#48606c"/><circle cx="58" cy="51" r="2" fill="#48606c"/><circle cx="77" cy="51" r="2" fill="#48606c"/><circle cx="96" cy="51" r="2" fill="#48606c"/>
+    <circle cx="1548" cy="35" r="2" fill="#48606c"/><circle cx="1567" cy="35" r="2" fill="#48606c"/><circle cx="1586" cy="35" r="2" fill="#48606c"/><circle cx="1605" cy="35" r="2" fill="#48606c"/><circle cx="1624" cy="35" r="2" fill="#48606c"/>
+    <circle cx="1548" cy="54" r="2" fill="#48606c"/><circle cx="1567" cy="54" r="2" fill="#48606c"/><circle cx="1586" cy="54" r="2" fill="#48606c"/><circle cx="1605" cy="54" r="2" fill="#48606c"/><circle cx="1624" cy="54" r="2" fill="#48606c"/>
+    <circle cx="1546" cy="850" r="2" fill="#48606c"/><circle cx="1565" cy="850" r="2" fill="#48606c"/><circle cx="1584" cy="850" r="2" fill="#48606c"/><circle cx="1603" cy="850" r="2" fill="#48606c"/><circle cx="1622" cy="850" r="2" fill="#48606c"/>
+    <circle cx="1546" cy="869" r="2" fill="#48606c"/><circle cx="1565" cy="869" r="2" fill="#48606c"/><circle cx="1584" cy="869" r="2" fill="#48606c"/><circle cx="1603" cy="869" r="2" fill="#48606c"/><circle cx="1622" cy="869" r="2" fill="#48606c"/>
+  </g>
+
+  <text x="85" y="134" class="title">llm-</text>
+  <text x="203" y="134" class="titleAccent">translate</text>
+  <text x="85" y="182" class="subtitle">Translate anywhere with LLMs</text>
+  <path d="M44 109 l8 20 l20 8 l-20 8 l-8 20 l-8 -20 l-20 -8 l20 -8 Z" fill="#43e8ff" opacity="0.85"/>
+  <path d="M58 90 l5 13 l13 5 l-13 5 l-5 13 l-5 -13 l-13 -5 l13 -5 Z" fill="#7cf17a" opacity="0.65"/>
+
+  <g transform="translate(32 220)" filter="url(#shadow)">
+    <rect width="348" height="505" rx="12" class="panel"/>
+    <path d="M18 63 H335" class="divider"/>
+    <text x="120" y="43" class="section">Entrypoints</text>
+    <path d="M76 22 L91 37 L76 52" stroke="#54e7ff" stroke-width="4" fill="none"/>
+    <path d="M98 55 H112" stroke="#54e7ff" stroke-width="4"/>
+
+    <rect x="26" y="78" width="45" height="39" rx="6" fill="#081016" stroke="#43e8ff" stroke-width="2"/>
+    <path d="M38 88 L49 98 L38 108" stroke="#eaf8fb" stroke-width="2.4" fill="none"/>
+    <path d="M54 109 H64" stroke="#eaf8fb" stroke-width="2.4"/>
+    <text x="84" y="109" class="label">CLI</text>
+    <rect x="20" y="124" width="304" height="134" rx="7" fill="url(#terminal)" stroke="#344a52"/>
+    <circle cx="37" cy="138" r="5" fill="#ff5f57"/><circle cx="56" cy="138" r="5" fill="#ffbd2e"/><circle cx="75" cy="138" r="5" fill="#28c840"/>
+    <text x="37" y="184" class="mono">$ llm-translate "Hello"</text>
+    <text x="37" y="215" class="mono" fill="#7cf17a">&gt; 你好</text>
+    <path d="M37 238 H48" stroke="#d9f7df" stroke-width="2"/>
+
+    <path d="M18 276 H335" class="divider"/>
+    <text x="57" y="328" font-family="Inter, ui-sans-serif, system-ui" font-size="34" font-weight="900" fill="#f8fafc" transform="rotate(-8 57 328)">Vim</text>
+    <text x="84" y="329" class="label">Vim</text>
+    <rect x="20" y="342" width="306" height="145" rx="8" fill="url(#terminal)" stroke="#344a52"/>
+    <rect x="72" y="361" width="244" height="21" fill="#253845" opacity="0.78"/>
+    <text x="35" y="374" class="small">1</text><text x="63" y="374" class="small">I have a question.</text>
+    <text x="35" y="401" class="small">2</text><text x="63" y="401" class="small" fill="#82f07d">&lt;leader&gt;tr</text>
+    <text x="35" y="427" class="small">3</text><text x="63" y="427" class="small" fill="#ffd45f">質問があります。</text>
+    <text x="35" y="481" class="small">-- VISUAL --</text><text x="224" y="481" class="small">2,1</text><text x="292" y="481" class="small">All</text>
+  </g>
+
+  <g transform="translate(30 770)" filter="url(#shadow)">
+    <rect width="465" height="132" rx="12" class="panel"/>
+    <g transform="translate(34 24)">
+      <path d="M26 0 L36 23 L60 20 L40 35 L48 59 L26 45 L4 59 L12 35 L-8 20 L16 23 Z" fill="#d8e9f2"/>
+      <text x="-3" y="80" class="text">Fast</text><text x="-20" y="101" class="small">Low latency</text>
+    </g>
+    <path d="M138 24 V110" class="divider"/>
+    <g transform="translate(164 26)">
+      <rect x="2" y="24" width="32" height="30" rx="4" fill="#cbd8df"/>
+      <path d="M8 24 V14 q0 -14 12 -14 q12 0 12 14 v10" stroke="#cbd8df" stroke-width="5" fill="none"/>
+      <text x="-8" y="78" class="text">Private</text><text x="-21" y="99" class="small">Your data,</text><text x="-12" y="115" class="small">your choice</text>
+    </g>
+    <path d="M252 24 V110" class="divider"/>
+    <g transform="translate(292 23)">
+      <path d="M0 19 h18 v-9 q0 -8 8 -8 q8 0 8 8 v9 h18 v16 h-9 q-8 0 -8 8 q0 8 8 8 h9 v18 H34 v9 q0 8 -8 8 q-8 0 -8 -8 v-9 H0 V51 h9 q8 0 8 -8 q0 -8 -8 -8 H0 Z" fill="#d8e9f2"/>
+      <text x="-18" y="81" class="text">Extensible</text><text x="-19" y="102" class="small">Pluggable</text><text x="-12" y="118" class="small">providers</text>
+    </g>
+    <path d="M363 24 V110" class="divider"/>
+    <g transform="translate(407 24)">
+      <rect x="-3" y="0" width="38" height="30" rx="5" fill="none" stroke="#d8e9f2" stroke-width="2.5"/>
+      <path d="M7 7 L16 15 L7 23" stroke="#d8e9f2" stroke-width="2.2" fill="none"/>
+      <path d="M19 23 H29" stroke="#d8e9f2" stroke-width="2.2"/>
+      <text x="-25" y="80" class="text">Open Source</text><text x="-9" y="101" class="small">MIT License</text>
+    </g>
+  </g>
+
+  <g transform="translate(600 64)" filter="url(#shadow)">
+    <rect width="505" height="247" rx="14" class="panel"/>
+    <text x="235" y="37" text-anchor="middle" class="section">Desktop</text>
+    <path d="M187 15 h27 v19 h-27 Z M198 34 v10 M187 44 h27" stroke="#58eaff" stroke-width="2" fill="none"/>
+    <path d="M14 54 H493" class="divider"/>
+    <path d="M254 68 V226" class="divider"/>
+    <text x="63" y="93" class="label">macOS</text>
+    <text x="324" y="93" class="label">Linux</text>
+    <circle cx="34" cy="88" r="10" fill="#fff"/>
+    <text x="282" y="96" font-family="Inter, ui-sans-serif, system-ui" font-size="20" font-weight="900" fill="#fff">Tux</text>
+
+    <rect x="20" y="108" width="208" height="30" rx="8" fill="#111920" stroke="#344a52"/>
+    <circle cx="43" cy="123" r="7" fill="#f2f5f6"/>
+    <path d="M74 125 q8 -8 16 0 M70 120 q12 -12 24 0" stroke="#d8e9f2" stroke-width="2" fill="none"/>
+    <circle cx="112" cy="123" r="6" fill="none" stroke="#d8e9f2" stroke-width="2"/><path d="M117 128 l8 8" stroke="#d8e9f2" stroke-width="2"/>
+    <rect x="138" y="113" width="28" height="20" rx="5" fill="#1c2730"/><text x="147" y="128" class="small">&gt;_</text>
+    <rect x="174" y="113" width="29" height="20" rx="5" fill="#1c2730"/><path d="M187 118 v10 M182 123 h10" stroke="#d8e9f2" stroke-width="2"/>
+
+    <rect x="56" y="148" width="152" height="84" rx="7" fill="#121a20" stroke="#3d4b55"/>
+    <path d="M114 139 l10 10 h20 l10 -10" fill="#121a20" stroke="#3d4b55"/>
+    <text x="69" y="171" class="small" fill="#f8fafc">Translate</text><text x="166" y="171" class="tiny">⌘T</text>
+    <text x="69" y="197" class="small" fill="#f8fafc">Preferences</text>
+    <text x="69" y="222" class="small" fill="#f8fafc">Quit</text>
+
+    <rect x="276" y="108" width="211" height="127" rx="7" fill="#11171c" stroke="#303b43"/>
+    <circle cx="293" cy="123" r="6" fill="#f34d25"/><circle cx="313" cy="123" r="6" fill="#2d3338"/><circle cx="333" cy="123" r="6" fill="#2d3338"/>
+    <path d="M444 122 h9 M467 119 v8 M463 123 h8 M485 118 l10 10 M495 118 l-10 10" stroke="#8fa2ae" stroke-width="1.5"/>
+    <rect x="276" y="138" width="63" height="97" fill="#0a1015"/>
+    <path d="M294 154 h36 M294 174 h26 M294 193 h39 M294 212 h34" stroke="#26353e" stroke-width="6"/>
+    <path d="M374 156 h35 l9 12 h40 v58 h-84 Z" fill="url(#cyanText)" opacity="0.75"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="720" y="388" width="193" height="219" rx="4" fill="#09212a" stroke="#56edff" stroke-width="3"/>
+    <path d="M720 388 L750 358 H883 L913 388 L913 576 L883 607 H750 L720 576 Z" fill="none" stroke="#56edff" stroke-width="3" filter="url(#glow)"/>
+    <g transform="translate(767 415)" stroke="#c6f7ff" stroke-width="4" fill="none" opacity="0.95">
+      <path d="M49 13 C22 13 15 35 28 49 C8 54 6 83 28 91 C18 111 41 132 58 116"/>
+      <path d="M49 13 C76 13 83 35 70 49 C90 54 92 83 70 91 C80 111 57 132 40 116"/>
+      <path d="M49 13 V118"/>
+      <circle cx="33" cy="52" r="5"/><circle cx="64" cy="53" r="5"/><circle cx="33" cy="85" r="5"/><circle cx="64" cy="85" r="5"/>
+      <path d="M33 52 L49 66 L64 53 M33 85 L49 72 L64 85"/>
+    </g>
+    <g opacity="0.85" fill="#60eaff">
+      <circle cx="752" cy="420" r="1.4"/><circle cx="773" cy="395" r="1.6"/><circle cx="867" cy="418" r="1.5"/><circle cx="884" cy="456" r="1.4"/><circle cx="746" cy="513" r="1.5"/><circle cx="877" cy="530" r="1.5"/><circle cx="806" cy="378" r="1.4"/>
+    </g>
+    <text x="816" y="559" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui" font-size="34" font-weight="900" fill="#f8fafc">LLM</text>
+    <text x="816" y="585" text-anchor="middle" class="section">Translation Core</text>
+  </g>
+
+  <g transform="translate(510 412)" filter="url(#shadow)">
+    <rect width="124" height="150" rx="12" class="panel"/>
+    <circle cx="39" cy="38" r="16" fill="#9bd2ff"/><circle cx="33" cy="35" r="2" fill="#0b1720"/><circle cx="45" cy="35" r="2" fill="#0b1720"/><path d="M38 53 l-15 16 l4 -20" fill="#9bd2ff"/>
+    <text x="22" y="84" class="section">Input</text>
+    <text x="22" y="112" class="text">Any text,</text>
+    <text x="22" y="136" class="text">anywhere</text>
+  </g>
+
+  <g transform="translate(958 412)" filter="url(#shadow)">
+    <rect width="122" height="150" rx="12" class="panelGreen"/>
+    <rect x="22" y="22" width="33" height="27" rx="6" fill="url(#green)"/><path d="M35 49 l-10 14 l3 -17" fill="#75ec75"/>
+    <path d="M30 33 h17 M30 42 h12" stroke="#082012" stroke-width="3"/>
+    <text x="18" y="84" class="sectionGreen">Response</text>
+    <text x="18" y="112" class="text">Translated text</text>
+    <text x="18" y="136" class="text">+ metadata</text>
+  </g>
+
+  <g transform="translate(548 660)" filter="url(#shadow)">
+    <rect width="546" height="171" rx="12" class="panelGold"/>
+    <text x="292" y="39" text-anchor="middle" class="sectionGold">Providers</text>
+    <path d="M178 24 q14 -22 32 0 h12 q16 0 16 15 h-77 q0 -15 17 -15" stroke="#ffd45f" stroke-width="3" fill="none"/>
+    <g transform="translate(14 49)">
+      <rect width="94" height="112" rx="8" class="card"/><path d="M33 35 q30 -25 48 10 q-19 -7 -30 5 q12 7 29 0 q-18 38 -58 19 q29 -8 19 -28 q-10 0 -18 14 q-8 -20 10 -20" fill="#4c7dff"/><text x="47" y="94" text-anchor="middle" class="small" fill="#edf7fb">DeepSeek</text>
+    </g>
+    <g transform="translate(121 49)">
+      <rect width="94" height="112" rx="8" class="card"/><circle cx="47" cy="44" r="24" fill="none" stroke="#36d987" stroke-width="5"/><path d="M30 44 h34 M47 25 v38 M35 31 q25 13 24 34 M59 31 q-25 13 -24 34" stroke="#36d987" stroke-width="3" fill="none"/><text x="47" y="94" text-anchor="middle" class="small" fill="#edf7fb">OpenAI</text>
+    </g>
+    <g transform="translate(228 49)">
+      <rect width="94" height="112" rx="8" class="card"/><g stroke="#ff8b50" stroke-width="5" stroke-linecap="round"><path d="M47 18 v54"/><path d="M20 45 h54"/><path d="M28 26 l38 38"/><path d="M66 26 l-38 38"/><path d="M36 20 l22 50"/><path d="M58 20 l-22 50"/></g><text x="47" y="94" text-anchor="middle" class="small" fill="#edf7fb">Claude</text>
+    </g>
+    <g transform="translate(335 49)">
+      <rect width="94" height="112" rx="8" class="card"/><path d="M31 25 q15 -22 32 0 v45 q-16 15 -32 0 Z" fill="none" stroke="#f3f6f8" stroke-width="4"/><circle cx="41" cy="47" r="3" fill="#f3f6f8"/><circle cx="55" cy="47" r="3" fill="#f3f6f8"/><path d="M37 60 q10 8 20 0" stroke="#f3f6f8" stroke-width="3" fill="none"/><text x="47" y="94" text-anchor="middle" class="small" fill="#edf7fb">Ollama</text>
+    </g>
+    <g transform="translate(442 49)">
+      <rect width="94" height="112" rx="8" class="card"/><circle cx="47" cy="45" r="25" fill="none" stroke="#f8fafc" stroke-width="4" stroke-dasharray="2 9"/><text x="47" y="94" text-anchor="middle" class="small" fill="#edf7fb">MyMemory</text>
+    </g>
+  </g>
+
+  <g transform="translate(1123 270)" filter="url(#shadow)">
+    <rect width="206" height="407" rx="12" class="panelGreen"/>
+    <text x="71" y="40" class="sectionGreen">Controls</text>
+    <g transform="translate(32 22)" stroke="#89f078" stroke-width="3" fill="none"><path d="M0 0 H28 M0 16 H28 M0 32 H28"/><circle cx="8" cy="0" r="4" fill="#89f078"/><circle cx="20" cy="16" r="4" fill="#89f078"/><circle cx="12" cy="32" r="4" fill="#89f078"/></g>
+    <path d="M14 58 H192" class="divider"/>
+    <g transform="translate(22 82)">
+      <circle cx="6" cy="6" r="11" fill="none" stroke="#dce8ee" stroke-width="2"/><path d="M-5 6 h22 M6 -5 q8 11 0 22 M6 -5 q-8 11 0 22" stroke="#dce8ee" stroke-width="1.5" fill="none"/>
+      <text x="34" y="9" class="text">Source</text>
+      <rect x="34" y="22" width="130" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="43" y="41" class="tiny" fill="#e6eff4">Auto Detect</text><path d="M146 32 l7 7 l7 -7" stroke="#dce8ee" stroke-width="1.5" fill="none"/>
+    </g>
+    <g transform="translate(22 154)">
+      <path d="M-3 0 h18 l-2 18 H-1 Z M-3 0 v28" stroke="#dce8ee" stroke-width="2" fill="none"/>
+      <text x="34" y="9" class="text">Target</text>
+      <rect x="34" y="22" width="130" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="43" y="41" class="tiny" fill="#e6eff4">中文 (简体)</text><path d="M146 32 l7 7 l7 -7" stroke="#dce8ee" stroke-width="1.5" fill="none"/>
+    </g>
+    <g transform="translate(22 226)">
+      <rect x="-2" y="-1" width="22" height="16" rx="2" fill="none" stroke="#dce8ee" stroke-width="2"/><path d="M3 3 h3 M9 3 h3 M15 3 h3 M3 9 h14" stroke="#dce8ee" stroke-width="1.5"/>
+      <text x="34" y="9" class="text">Shortcuts</text>
+      <rect x="34" y="23" width="33" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="43" y="43" class="small">⌘</text>
+      <text x="73" y="42" class="small">+</text><rect x="88" y="23" width="33" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="98" y="43" class="small">⇧</text>
+      <text x="128" y="42" class="small">+</text><rect x="143" y="23" width="28" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="153" y="43" class="small">T</text>
+    </g>
+    <g transform="translate(22 305)">
+      <path d="M0 9 h8 l13 -12 v33 L8 18 H0 Z" fill="#dce8ee"/><text x="34" y="12" class="text">TTS</text><rect x="124" y="0" width="38" height="20" rx="10" fill="url(#green)"/><circle cx="151" cy="10" r="8" fill="#effaf0"/>
+    </g>
+    <g transform="translate(22 354)">
+      <path d="M0 7 l15 -15 h15 v15 l-23 23 L0 23 Z M20 -2 h2" stroke="#dce8ee" stroke-width="2" fill="none"/><text x="34" y="10" class="text">Version</text>
+      <rect x="34" y="24" width="130" height="28" rx="4" fill="#111a1f" stroke="#40545c"/><text x="43" y="43" class="tiny" fill="#e6eff4">v1 (Latest)</text><path d="M146 34 l7 7 l7 -7" stroke="#dce8ee" stroke-width="1.5" fill="none"/>
+    </g>
+  </g>
+
+  <g transform="translate(1392 222)" filter="url(#shadow)">
+    <rect width="258" height="562" rx="12" class="panelGold"/>
+    <text x="86" y="43" class="sectionGold">Output</text>
+    <path d="M41 17 h22 q7 0 7 7 v16 q0 7 -7 7 H51 l-13 11 v-11 q-7 0 -7 -7 V24 q0 -7 10 -7 Z" stroke="#ffd45f" stroke-width="3" fill="none"/>
+    <path d="M16 60 H242" class="divider"/>
+    <g transform="translate(18 76)">
+      <rect width="210" height="91" rx="11" fill="#0b1c22" stroke="#39e7ff" stroke-width="2"/>
+      <path d="M176 91 l16 14 v-14 h8" fill="#0b1c22" stroke="#39e7ff" stroke-width="2"/>
+      <text x="19" y="39" class="label">Hello</text><path d="M20 58 h9 l15 -11 v31 L29 67 h-9 Z" fill="#a9d6ff"/>
+      <path d="M52 64 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0" stroke="#39e7ff" stroke-width="2" fill="none"/>
+    </g>
+    <g transform="translate(18 194)">
+      <rect width="210" height="91" rx="11" fill="#0b2017" stroke="#73f173" stroke-width="2"/>
+      <path d="M176 91 l16 14 v-14 h8" fill="#0b2017" stroke="#73f173" stroke-width="2"/>
+      <text x="19" y="39" class="label">你好</text><path d="M20 58 h9 l15 -11 v31 L29 67 h-9 Z" fill="#b6f7bd"/>
+      <path d="M52 64 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0" stroke="#73f173" stroke-width="2" fill="none"/>
+    </g>
+    <g transform="translate(18 313)">
+      <rect width="210" height="91" rx="11" fill="#201708" stroke="#ffd45f" stroke-width="2"/>
+      <path d="M176 91 l16 14 v-14 h8" fill="#201708" stroke="#ffd45f" stroke-width="2"/>
+      <text x="19" y="39" class="label">こんにちは</text><path d="M20 58 h9 l15 -11 v31 L29 67 h-9 Z" fill="#f4deb0"/>
+      <path d="M52 64 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0" stroke="#ffd45f" stroke-width="2" fill="none"/>
+    </g>
+    <g transform="translate(18 431)">
+      <rect width="210" height="91" rx="11" fill="#0a1720" stroke="#43b6ff" stroke-width="2"/>
+      <path d="M176 91 l16 14 v-14 h8" fill="#0a1720" stroke="#43b6ff" stroke-width="2"/>
+      <text x="19" y="39" class="label">Bonjour</text><path d="M20 58 h9 l15 -11 v31 L29 67 h-9 Z" fill="#a9d6ff"/>
+      <path d="M52 64 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0 q4 -14 8 0 q4 14 8 0" stroke="#43b6ff" stroke-width="2" fill="none"/>
+    </g>
+  </g>
+
+  <path class="dashCyan" d="M380 310 H435 q24 0 24 24 v98 q0 34 46 34"/>
+  <path class="dashCyan" d="M380 618 H435 q24 0 24 -24 v-69 q0 -32 46 -32"/>
+  <path class="lineCyan" d="M634 478 H712"/>
+  <path class="lineGreen" d="M913 478 H954"/>
+  <path class="lineGreen" d="M1080 487 h20 q11 0 23 -11"/>
+  <path class="dashCyan" d="M712 313 v21 q0 12 22 12 h50 q16 0 16 36"/>
+  <path class="dashCyan" d="M984 313 v21 q0 12 -22 12 h-94 q-17 0 -17 36"/>
+  <path class="lineGold" d="M817 660 V613"/>
+  <path class="dashCyan" d="M1329 365 h20 q15 0 15 -17 q0 -18 28 -18"/>
+  <path class="dashGreen" d="M1329 472 h63"/>
+  <path class="dashGold" d="M1329 560 h35 q20 0 20 24 q0 20 16 20"/>
+  <path class="dashCyan" d="M1248 677 v22 q0 18 26 18 h116"/>
+</svg>
