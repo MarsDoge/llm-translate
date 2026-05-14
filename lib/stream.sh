@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Streaming response parsers for LLM providers.
 #
-# Three wire formats are handled:
+# Four wire formats are handled:
 #   * OpenAI-compatible Chat Completions SSE (deepseek, openai, doubao, grok,
 #     kimi, mistral, qwen, zhipu, aliyun-codingplan)
+#   * OpenAI-compatible Responses SSE (codex-responses)
 #   * Anthropic Messages SSE (claude)
 #   * Ollama NDJSON (ollama)
 #
@@ -26,6 +27,50 @@ llm_translate_stream_openai_sse() {
       'data: '*)
         data="${line#data: }"
         content="$(printf '%s' "$data" | jq -j '.choices[0].delta.content // empty' 2>/dev/null || true)"
+        if [ -n "$content" ]; then
+          printf '%s' "$content"
+          got=1
+        fi
+        ;;
+      ''|:*|event:*) ;;
+      *) err+="$line"$'\n' ;;
+    esac
+  done
+  if [ "$got" -eq 0 ] && [ -n "$err" ]; then
+    printf '%s: %s' "$label" "$err" >&2
+    return 1
+  fi
+  printf '\n'
+}
+
+# OpenAI-compatible Responses SSE.
+#   event: response.output_text.delta
+#   data: {"type":"response.output_text.delta","delta":"..."}
+# Some compatible endpoints may emit the text in .text or nested under .delta.
+llm_translate_stream_responses_sse() {
+  local label="${1:-provider}"
+  local line data content got=0 err=''
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    case "$line" in
+      'data: [DONE]') break ;;
+      'data: '*)
+        data="${line#data: }"
+        content="$(printf '%s' "$data" | jq -j '
+          def out_text:
+            if (.delta | type) == "object" then
+              (.delta.text // .delta.content // empty)
+            else
+              (.delta // .text // empty)
+            end;
+          if .type == "response.output_text.delta" then
+            out_text
+          elif .type then
+            empty
+          else
+            out_text
+          end
+        ' 2>/dev/null || true)"
         if [ -n "$content" ]; then
           printf '%s' "$content"
           got=1

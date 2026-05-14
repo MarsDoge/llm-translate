@@ -186,7 +186,7 @@ export LLM_TRANSLATE_TARGET="Simplified Chinese"
 
 | Flag                  | Default                | Notes                                                    |
 | --------------------- | ---------------------- | -------------------------------------------------------- |
-| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory` |
+| `-p`, `--provider`    | `deepseek`             | `deepseek` / `openai` / `codex-responses` / `claude` / `ollama` / `aliyun-codingplan` / `mymemory` |
 | `-m`, `--model`       | provider-specific      | e.g. `deepseek-chat`, `gpt-4o-mini`; unused for mymemory |
 | `-t`, `--target`      | `Simplified Chinese`   | natural name (`"Chinese"`) or ISO code (`zh-CN`)         |
 | `-s`, `--source`      | `auto`                 | required for mymemory when source is not English         |
@@ -205,6 +205,7 @@ Override defaults via env vars: `LLM_TRANSLATE_PROVIDER`, `LLM_TRANSLATE_MODEL`,
 # translate (default task)
 echo "Hello, world!" | llm-translate -t "Chinese"
 llm-translate -p openai -m gpt-4o-mini < README.md
+llm-translate -p codex-responses --stream < README.md
 llm-translate -p aliyun-codingplan -m qwen3.5-plus --task optimize < messy.py
 llm-translate -p aliyun-codingplan -m kimi-k2.5 -t English < notes.zh.md
 llm-translate -p aliyun-codingplan -m glm-5 --task bugfix < buggy.go
@@ -262,10 +263,23 @@ let g:llm_translate_map_bugfix   = 0    " disable default <leader>b
 | --------- | ------------------- | ------------------------------ | ------ |
 | deepseek  | `DEEPSEEK_API_KEY`  | `deepseek-chat`                | LLM    |
 | openai    | `OPENAI_API_KEY`    | `gpt-4o-mini`                  | LLM    |
+| codex-responses | `OPENAI_API_KEY` | `gpt-5.5`                    | LLM    |
 | claude    | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001`    | LLM    |
 | aliyun-codingplan | `ALIYUN_CODING_PLAN_API_KEY` | `qwen3.5-plus`    | LLM    |
 | ollama    | *(none — local)*    | `qwen2.5:7b`                   | LLM    |
 | mymemory  | *(none — free tier)*| n/a                            | MT API |
+
+### Codex Responses
+
+`codex-responses` uses the Responses API at
+`https://api.dogexorg.com/v1/responses` by default, streams output, and reads
+`OPENAI_API_KEY`. Override the base URL with `OPENAI_API_BASE` and the model
+with `LLM_TRANSLATE_MODEL` or `-m`.
+
+```bash
+export OPENAI_API_KEY=sk-...
+echo "Hello" | llm-translate -p codex-responses --stream -t Chinese
+```
 
 ### Aliyun Coding Plan
 
@@ -315,7 +329,7 @@ non-LLM providers. Any row below accepts all listed forms interchangeably:
 
 Unknown input passes through unchanged, so any provider-specific code works.
 
-LLM providers (`deepseek` / `openai` / `claude` / `ollama`) understand any
+LLM providers (`deepseek` / `openai` / `codex-responses` / `claude` / `ollama`) understand any
 natural-language target directly and ignore the normalization table — it
 mainly matters for `mymemory` and future MT providers that need strict codes.
 For pairs not in the table, pass the ISO code explicitly:

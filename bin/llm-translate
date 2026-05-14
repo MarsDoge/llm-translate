@@ -44,7 +44,7 @@ USAGE
   echo "hello world" | llm-translate -t "French"
 
 OPTIONS
-  -p, --provider NAME     Provider: deepseek | openai | claude | ollama | aliyun-codingplan | mymemory
+  -p, --provider NAME     Provider: deepseek | openai | codex-responses | claude | ollama | aliyun-codingplan | mymemory
                           (default: \$LLM_TRANSLATE_PROVIDER or deepseek)
   -m, --model NAME        Model name (provider-specific default; unused for mymemory)
   -t, --target LANG       Target language. Accepts natural name ("Chinese")
